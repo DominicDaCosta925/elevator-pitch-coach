@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Mic, Upload, Zap, BarChart3, MessageSquare, ChevronRight, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -14,11 +14,22 @@ import type { Metrics } from "@/lib/types";
 
 const ThemeToggle = () => {
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="fixed top-6 right-6 p-2.5 rounded-xl bg-card/80 border border-border backdrop-blur-sm z-50 w-10 h-10" />
+    );
+  }
   
   return (
     <button
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="fixed top-6 right-6 p-2.5 rounded-xl bg-card/80 hover:bg-accent border border-border backdrop-blur-sm transition-all z-50 group"
+      className="fixed top-6 right-6 p-2.5 rounded-xl bg-card/80 hover:bg-accent border border-border backdrop-blur-sm transition-all z-50 group hover:scale-105 active:scale-95"
     >
       <div className="relative w-5 h-5">
         {theme === "dark" ? (
@@ -250,77 +261,94 @@ export default function Page() {
             </p>
           </div>
 
-          <div className="bg-card border rounded-2xl p-6 shadow-sm">
-            <div className="max-w-4xl mx-auto">
-              <div className="grid lg:grid-cols-3 gap-6 items-start">
-                {/* Compact Upload Area */}
-                <div className="lg:col-span-1 space-y-4">
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium claude-text">Upload Resume</label>
+          <div className="bg-card border rounded-2xl p-8 shadow-sm">
+            <div className="max-w-5xl mx-auto space-y-8">
+              <div className="grid lg:grid-cols-5 gap-8 items-start">
+                {/* Upload Area */}
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="space-y-4">
+                    <label htmlFor="resume-upload" className="text-sm font-medium claude-text block">
+                      Upload Resume
+                    </label>
                     <div className="relative">
                       <input
+                        id="resume-upload"
+                        name="resume-upload"
                         type="file"
                         accept=".pdf,.docx,.txt"
                         onChange={(e) => e.target.files?.[0] && setResumeFile(e.target.files[0])}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                         disabled={isGeneratingPitch}
+                        aria-label="Upload resume file"
                       />
                       <div className={`
-                        border-2 border-dashed rounded-xl p-4 text-center transition-all
+                        border-2 border-dashed rounded-xl p-6 text-center transition-all
                         ${resumeFile 
                           ? 'border-primary/50 bg-primary/5' 
-                          : 'border-border hover:border-primary/30'
+                          : 'border-border hover:border-primary/30 hover:bg-primary/5'
                         }
+                        ${isGeneratingPitch ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                       `}>
-                        <Upload className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
+                        <Upload className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />
                         {resumeFile ? (
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium claude-text truncate">{resumeFile.name}</p>
-                            <p className="text-xs text-primary">Ready to generate</p>
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium claude-text truncate max-w-full">{resumeFile.name}</p>
+                            <p className="text-xs text-primary font-medium">✓ Ready to generate</p>
                           </div>
                         ) : (
-                          <div className="space-y-1">
-                            <p className="text-sm claude-text">Drop file or click</p>
-                            <p className="text-xs text-muted-foreground">PDF, DOCX, TXT</p>
+                          <div className="space-y-2">
+                            <p className="text-sm claude-text font-medium">Drop file or click to upload</p>
+                            <p className="text-xs text-muted-foreground">PDF, DOCX, or TXT files</p>
                           </div>
                         )}
                       </div>
                     </div>
                   </div>
                   
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium claude-text">Target Role</label>
+                  <div className="space-y-3">
+                    <label htmlFor="target-role" className="text-sm font-medium claude-text block">
+                      Target Role <span className="text-muted-foreground font-normal">(Optional)</span>
+                    </label>
                     <input
+                      id="target-role"
+                      name="target-role"
                       type="text"
                       value={targetRole}
                       onChange={(e) => setTargetRole(e.target.value)}
-                      placeholder="Software Engineer..."
-                      className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all claude-text text-sm"
+                      placeholder="Software Engineer, Product Manager..."
+                      className="w-full px-4 py-3 bg-input border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all claude-text text-sm"
+                      disabled={isGeneratingPitch}
                     />
                   </div>
                 </div>
 
                 {/* Pitch Length & Generate */}
-                <div className="lg:col-span-2 space-y-6">
-                  <PitchLengthSlider
-                    value={pitchLength}
-                    onChange={setPitchLength}
-                    disabled={isGeneratingPitch}
-                  />
+                <div className="lg:col-span-3 space-y-8">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium claude-text">Pitch Length</h3>
+                    <PitchLengthSlider
+                      value={pitchLength}
+                      onChange={setPitchLength}
+                      onChangeComplete={handlePitchLengthChange}
+                      disabled={isGeneratingPitch}
+                      isUpdating={isAdjustingPitch}
+                    />
+                  </div>
                   
                   <button
                     onClick={handleGeneratePitch}
                     disabled={!resumeFile || isGeneratingPitch}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 claude-button"
+                    className="w-full bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] text-primary-foreground px-8 py-4 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center space-x-3 claude-button shadow-lg hover:shadow-xl"
+                    aria-label={isGeneratingPitch ? "Generating pitch..." : "Generate elevator pitch"}
                   >
                     {isGeneratingPitch ? (
-                      <div className="flex items-center space-x-2">
-                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        <span>Generating your pitch...</span>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        <span>Generating your perfect pitch...</span>
                       </div>
                     ) : (
                       <>
-                        <Zap className="w-4 h-4" />
+                        <Zap className="w-5 h-5" />
                         <span>Generate Pitch</span>
                       </>
                     )}
@@ -407,16 +435,16 @@ export default function Page() {
             </div>
 
             <div className="space-y-8">
-              {metrics && <ScoreCard m={metrics} />}
+      {metrics && <ScoreCard m={metrics} />}
 
-              {transcript && (
+      {transcript && (
                 <div className="bg-card border rounded-2xl p-6">
                   <h3 className="text-lg font-medium mb-4 claude-text">Transcript</h3>
                   <p className="text-muted-foreground leading-relaxed claude-text">{transcript}</p>
                 </div>
-              )}
+      )}
 
-              {coach && (
+      {coach && (
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6">
                     <h3 className="text-lg font-medium text-emerald-600 dark:text-emerald-400 mb-4 claude-text">Strengths</h3>
@@ -427,8 +455,8 @@ export default function Page() {
                           <span className="text-sm text-emerald-700 dark:text-emerald-300 claude-text">{s}</span>
                         </li>
                       ))}
-                    </ul>
-                  </div>
+            </ul>
+          </div>
                   
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-6">
                     <h3 className="text-lg font-medium text-blue-600 dark:text-blue-400 mb-4 claude-text">Improvements</h3>
@@ -439,8 +467,8 @@ export default function Page() {
                           <span className="text-sm text-blue-700 dark:text-blue-300 claude-text">{s}</span>
                         </li>
                       ))}
-                    </ul>
-                  </div>
+            </ul>
+          </div>
 
                   <div className="md:col-span-2 bg-card border rounded-2xl p-6">
                     <h3 className="text-lg font-medium mb-4 claude-text">Polished Script</h3>
@@ -453,7 +481,7 @@ export default function Page() {
                   </div>
                 </div>
               )}
-            </div>
+          </div>
           </motion.section>
         )}
 
@@ -463,7 +491,7 @@ export default function Page() {
             <h3 className="font-medium text-destructive mb-2 claude-text">Something went wrong</h3>
             <p className="text-destructive/80 claude-text">{error}</p>
           </div>
-        )}
+      )}
       </div>
     </div>
   );

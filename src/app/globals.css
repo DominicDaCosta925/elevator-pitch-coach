@@ -1,5 +1,4 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Söhne:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -55,7 +54,7 @@
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-family: 'Söhne', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   font-feature-settings: "rlig" 1, "calt" 1;
   line-height: 1.6;
   font-weight: 400;
@@ -87,7 +86,7 @@ body {
 
 /* Claude-style text rendering */
 .claude-text {
-  font-family: 'Söhne', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 400;
   letter-spacing: -0.011em;
   line-height: 1.6;
@@ -95,9 +94,121 @@ body {
 
 /* Better button styles */
 .claude-button {
-  font-family: 'Söhne', 'Inter', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 500;
   letter-spacing: -0.006em;
+}
+
+/* Enhanced button hover states */
+.btn-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.btn-hover:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Range input styling for cross-browser compatibility */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 12px;
+  border-radius: 6px;
+  background: transparent;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 32px;
+  width: 32px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  cursor: pointer;
+  border: 4px solid hsl(var(--background));
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+input[type="range"]::-moz-range-thumb {
+  height: 32px;
+  width: 32px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  cursor: pointer;
+  border: 4px solid hsl(var(--background));
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Form styling improvements */
+.form-field {
+  position: relative;
+}
+
+.form-field input:focus + .form-label,
+.form-field input:not(:placeholder-shown) + .form-label {
+  transform: translateY(-20px) scale(0.85);
+  color: hsl(var(--primary));
+}
+
+.form-label {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  background: hsl(var(--background));
+  padding: 0 4px;
+}
+
+/* Loading animations */
+@keyframes pulse-orange {
+  0%, 100% {
+    opacity: 1;
+    background-color: hsl(var(--primary));
+  }
+  50% {
+    opacity: 0.7;
+    background-color: hsl(var(--primary) / 0.7);
+  }
+}
+
+.pulse-orange {
+  animation: pulse-orange 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Recording indicator */
+@keyframes recording-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+.recording-pulse {
+  animation: recording-pulse 1.5s ease-in-out infinite;
 }
 
 /* Claude-inspired gradients */
