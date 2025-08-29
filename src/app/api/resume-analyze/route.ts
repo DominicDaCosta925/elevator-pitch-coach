@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import pdf from "pdf-parse";
 import mammoth from "mammoth";
 
 export const runtime = "nodejs";
@@ -10,19 +9,20 @@ async function extractTextFromFile(file: File): Promise<string> {
 
   try {
     if (fileName.endsWith('.pdf')) {
-      const data = await pdf(buffer);
-      return data.text;
+      // Temporarily disabled PDF support due to library issues
+      // You can upload a TXT or DOCX version of your resume instead
+      throw new Error('PDF support is temporarily disabled. Please upload your resume as a .txt or .docx file instead.');
     } else if (fileName.endsWith('.docx')) {
       const result = await mammoth.extractRawText({ buffer });
       return result.value;
     } else if (fileName.endsWith('.txt')) {
       return buffer.toString('utf-8');
     } else {
-      throw new Error('Unsupported file type');
+      throw new Error('Unsupported file type. Please upload a .txt or .docx file.');
     }
   } catch (error) {
     console.error('File extraction error:', error);
-    throw new Error('Failed to extract text from file');
+    throw error; // Re-throw the original error message
   }
 }
 
@@ -41,18 +41,17 @@ export async function POST(req: NextRequest) {
       type: file.type
     });
 
-    // Validate file type
+    // Validate file type (temporarily no PDF support)
     const validTypes = [
-      'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'text/plain'
     ];
     
-    const isValidExtension = file.name.toLowerCase().match(/\.(pdf|docx|txt)$/);
+    const isValidExtension = file.name.toLowerCase().match(/\.(docx|txt)$/);
     
     if (!validTypes.includes(file.type) && !isValidExtension) {
       return NextResponse.json({ 
-        error: "Invalid file type. Please upload a PDF, DOCX, or TXT file." 
+        error: "Please upload a DOCX or TXT file. PDF support is temporarily disabled." 
       }, { status: 400 });
     }
 

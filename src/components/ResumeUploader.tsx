@@ -16,10 +16,8 @@ export default function ResumeUploader({ onFileUploaded, isProcessing = false }:
     
     const files = Array.from(e.dataTransfer.files);
     const validFile = files.find(file => 
-      file.type === 'application/pdf' || 
       file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
       file.type === 'text/plain' ||
-      file.name.endsWith('.pdf') ||
       file.name.endsWith('.docx') ||
       file.name.endsWith('.txt')
     );
@@ -28,7 +26,7 @@ export default function ResumeUploader({ onFileUploaded, isProcessing = false }:
       setSelectedFile(validFile);
       onFileUploaded(validFile);
     } else {
-      alert('Please upload a PDF, DOCX, or TXT file.');
+      alert('Please upload a DOCX or TXT file. PDF support is temporarily disabled.');
     }
   }, [onFileUploaded]);
 
@@ -75,7 +73,7 @@ export default function ResumeUploader({ onFileUploaded, isProcessing = false }:
       >
         <input
           type="file"
-          accept=".pdf,.docx,.txt"
+          accept=".docx,.txt"
           onChange={handleFileSelect}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           disabled={isProcessing}
@@ -111,7 +109,10 @@ export default function ResumeUploader({ onFileUploaded, isProcessing = false }:
                 Drag and drop your resume here, or click to browse
               </p>
               <p className="text-sm text-gray-600">
-                Supports PDF, DOCX, and TXT files
+                Supports DOCX and TXT files
+              </p>
+              <p className="text-xs text-orange-600 font-medium">
+                📋 PDF support temporarily disabled
               </p>
             </div>
           )}
