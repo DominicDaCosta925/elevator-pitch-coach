@@ -1,40 +1,56 @@
 import { NextRequest, NextResponse } from "next/server";
 // Dynamic import for file-type to avoid module resolution issues
 
-// PDF parsing with pdfjs-dist (more stable than pdf-parse)
-async function parsePDF(buffer: Buffer) {
-  try {
-    // Dynamic import to avoid server initialization issues
-    const pdfjsLib = await import('pdfjs-dist');
-    
-    // Load the PDF document
-    const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
-    const pdf = await loadingTask.promise;
-    
-    let fullText = '';
-    const numPages = pdf.numPages;
-    
-    // Extract text from each page
-    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ')
-        .trim();
-      
-      if (pageText) {
-        fullText += pageText + '\n';
-      }
+// PDF parsing with pdf-text-extract (Node.js compatible)
+async function parsePDF(buffer: Buffer): Promise<{ numpages: number; text: string }> {
+  return new Promise((resolve, reject) => {
+    try {
+      // Use dynamic import for pdf-text-extract
+      import('pdf-text-extract').then((pdfTextExtract) => {
+        const extract = pdfTextExtract.default || pdfTextExtract;
+        
+        // Write buffer to a temporary file for processing
+        const fs = require('fs');
+        const path = require('path');
+        const os = require('os');
+        
+        const tempFile = path.join(os.tmpdir(), `pdf-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.pdf`);
+        
+        fs.writeFileSync(tempFile, buffer);
+        
+        // Extract text from the temporary file
+        extract(tempFile, { splitPages: false }, (err: any, pages: string[]) => {
+          // Clean up temporary file
+          try {
+            fs.unlinkSync(tempFile);
+          } catch (cleanupError) {
+            console.warn('Could not clean up temp file:', cleanupError);
+          }
+          
+          if (err) {
+            reject(new Error(`PDF text extraction failed: ${err.message || err}`));
+            return;
+          }
+          
+          if (!pages || pages.length === 0) {
+            reject(new Error('No text could be extracted from PDF'));
+            return;
+          }
+          
+          const fullText = Array.isArray(pages) ? pages.join('\n').trim() : String(pages).trim();
+          
+          resolve({
+            numpages: Array.isArray(pages) ? pages.length : 1,
+            text: fullText
+          });
+        });
+      }).catch((importError) => {
+        reject(new Error(`PDF parsing module import failed: ${importError.message}`));
+      });
+    } catch (error) {
+      reject(new Error(`PDF parsing setup failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
     }
-    
-    return {
-      numpages: numPages,
-      text: fullText.trim()
-    };
-  } catch (error) {
-    throw new Error(`PDF parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+  });
 }
 
 export const runtime = "nodejs";
@@ -152,7 +168,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<PDFUploadResp
     // Success response
     const response: PDFUploadResponse = {
       ok: true,
-      method: "pdfjs-dist",
+      method: "pdf-text-extract",
       pageCount: pdfData.numpages,
       bytes: buffer.length,
       text: extractedText
