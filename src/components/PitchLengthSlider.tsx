@@ -3,12 +3,11 @@
 import React, { useMemo, useCallback, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface PitchLengthSliderProps {
-  value: number; // seconds
+  value: number;
   onChange: (seconds: number) => void;
-  onChangeComplete?: (seconds: number) => void; // Called when user releases slider
+  onChangeComplete?: (seconds: number) => void;
   disabled?: boolean;
   isUpdating?: boolean;
 }
@@ -29,7 +28,6 @@ export default function PitchLengthSlider({
     return ((value - MIN_SECONDS) / (MAX_SECONDS - MIN_SECONDS)) * 100;
   }, [value]);
 
-  // Estimate speaking rate range (words/second)
   function estimateWordsRange(sec: number): { low: number; high: number } {
     const low = Math.round(sec * 2.0);
     const high = Math.round(sec * 2.3);
@@ -39,9 +37,9 @@ export default function PitchLengthSlider({
   const { low, high } = estimateWordsRange(value);
 
   const presets = [
-    { label: "Quick Intro", value: 20, description: "Brief introduction" },
+    { label: "Quick", value: 20, description: "Brief introduction" },
     { label: "Balanced", value: 50, description: "Standard pitch" },
-    { label: "Full Story", value: 90, description: "Detailed narrative" },
+    { label: "Detailed", value: 90, description: "Full narrative" },
   ];
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,7 +66,7 @@ export default function PitchLengthSlider({
   }, [disabled, onChange, onChangeComplete]);
 
   const getSliderColor = () => {
-    if (value <= 30) return "from-green-400 to-green-600";
+    if (value <= 30) return "from-emerald-400 to-emerald-600";
     if (value <= 60) return "from-blue-400 to-blue-600";
     return "from-purple-400 to-purple-600";
   };
@@ -79,27 +77,38 @@ export default function PitchLengthSlider({
 
   return (
     <div className="space-y-6">
+      <div className="text-center">
+        <label className="text-sm font-medium mb-2 block">Pitch Length</label>
+        <p className="text-xs text-muted-foreground">Choose your target duration</p>
+      </div>
+
       {/* Preset Chips */}
       <div className="flex flex-wrap justify-center gap-3">
         {presets.map((preset) => (
-          <motion.div key={preset.value} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              variant={value === preset.value ? "primary" : "outline"}
-              size="sm"
-              onClick={() => handlePresetClick(preset.value)}
-              disabled={disabled || isUpdating}
-              className="text-xs"
-            >
-              {preset.label} • {preset.value}s
-            </Button>
-          </motion.div>
+          <motion.button
+            key={preset.value}
+            onClick={() => handlePresetClick(preset.value)}
+            disabled={disabled || isUpdating}
+            whileHover={{ scale: 1.05 }} 
+            whileTap={{ scale: 0.95 }}
+            className={`
+              px-4 py-2 rounded-full text-xs font-medium transition-all border
+              ${value === preset.value 
+                ? 'bg-primary text-primary-foreground border-primary' 
+                : 'bg-card border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              }
+              disabled:opacity-50 disabled:cursor-not-allowed
+            `}
+          >
+            {preset.label} • {preset.value}s
+          </motion.button>
         ))}
       </div>
 
       {/* Slider Container */}
       <div className="relative px-4">
         {/* Track Background */}
-        <div className="relative h-3 bg-slate-200 rounded-full overflow-hidden">
+        <div className="relative h-3 bg-muted rounded-full overflow-hidden">
           {/* Gradient Track */}
           <motion.div
             className={`h-full bg-gradient-to-r ${getSliderColor()} transition-all duration-300`}
@@ -127,8 +136,8 @@ export default function PitchLengthSlider({
         {/* Custom Thumb */}
         <motion.div
           className={`
-            absolute top-1/2 -translate-y-1/2 w-8 h-8 rounded-full shadow-lg border-4 border-white
-            ${disabled || isUpdating ? 'bg-slate-400' : 'bg-white'}
+            absolute top-1/2 -translate-y-1/2 w-8 h-8 rounded-full shadow-lg border-4 border-background
+            ${disabled || isUpdating ? 'bg-muted' : 'bg-card'}
             transition-all duration-200 pointer-events-none
           `}
           style={{ left: getThumbPosition() }}
@@ -141,13 +150,13 @@ export default function PitchLengthSlider({
         >
           {/* Thumb Icon */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <Clock className={`w-4 h-4 ${disabled || isUpdating ? 'text-slate-500' : 'text-slate-700'}`} />
+            <Clock className={`w-4 h-4 ${disabled || isUpdating ? 'text-muted-foreground' : 'text-foreground'}`} />
           </div>
         </motion.div>
 
         {/* Live Seconds Display */}
         <motion.div
-          className="absolute -top-12 bg-slate-900 text-white px-3 py-1 rounded-lg text-sm font-medium shadow-lg"
+          className="absolute -top-12 bg-foreground text-background px-3 py-1 rounded-lg text-sm font-medium shadow-lg"
           style={{ left: getThumbPosition() }}
           animate={{
             scale: isDragging ? 1.1 : 1,
@@ -161,30 +170,30 @@ export default function PitchLengthSlider({
             )}
           </div>
           {/* Tooltip Arrow */}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900" />
+          <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-foreground" />
         </motion.div>
 
         {/* Tick marks and labels */}
-        <div className="absolute -bottom-8 left-0 right-0 flex justify-between text-xs text-slate-600">
+        <div className="absolute -bottom-8 left-0 right-0 flex justify-between text-xs text-muted-foreground">
           <div className="flex flex-col items-start">
-            <div className="w-px h-3 bg-slate-400 mb-1" />
+            <div className="w-px h-3 bg-border mb-1" />
             <div className="text-center">
-              <div className="font-medium">Quick Intro</div>
-              <div className="text-slate-500">20s</div>
+              <div className="font-medium">Quick</div>
+              <div className="text-muted-foreground">20s</div>
             </div>
           </div>
           <div className="flex flex-col items-center">
-            <div className="w-px h-3 bg-slate-400 mb-1" />
+            <div className="w-px h-3 bg-border mb-1" />
             <div className="text-center">
-              <div className="font-medium">Balanced Pitch</div>
-              <div className="text-slate-500">~50s</div>
+              <div className="font-medium">Balanced</div>
+              <div className="text-muted-foreground">~50s</div>
             </div>
           </div>
           <div className="flex flex-col items-end">
-            <div className="w-px h-3 bg-slate-400 mb-1" />
+            <div className="w-px h-3 bg-border mb-1" />
             <div className="text-center">
-              <div className="font-medium">Full Story</div>
-              <div className="text-slate-500">90s</div>
+              <div className="font-medium">Detailed</div>
+              <div className="text-muted-foreground">90s</div>
             </div>
           </div>
         </div>
@@ -195,10 +204,10 @@ export default function PitchLengthSlider({
         layout
         className="flex justify-center"
       >
-        <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 shadow-sm">
-          <Clock className="w-4 h-4 text-slate-500" />
-          <span className="text-sm text-slate-600">Estimated length:</span>
-          <span className="font-medium text-slate-900">~{low}–{high} words</span>
+        <div className="inline-flex items-center gap-2 rounded-xl border bg-card px-4 py-2 shadow-sm">
+          <Clock className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Estimated length:</span>
+          <span className="font-medium">~{low}–{high} words</span>
           <AnimatePresence>
             {isUpdating && (
               <motion.div
@@ -206,7 +215,7 @@ export default function PitchLengthSlider({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
               >
-                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
               </motion.div>
             )}
           </AnimatePresence>
@@ -215,7 +224,7 @@ export default function PitchLengthSlider({
 
       {/* Helper Text */}
       <div className="text-center">
-        <p className="text-xs text-slate-500 max-w-md mx-auto">
+        <p className="text-xs text-muted-foreground max-w-md mx-auto">
           Most effective pitches are 45-60 seconds. You can always adjust the length after generation.
         </p>
       </div>
