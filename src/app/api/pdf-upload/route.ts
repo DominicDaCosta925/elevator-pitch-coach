@@ -1,12 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 // Dynamic import for file-type to avoid module resolution issues
 
-// PDF parsing with proper error handling
+// PDF parsing with pdfjs-dist (more stable than pdf-parse)
 async function parsePDF(buffer: Buffer) {
   try {
     // Dynamic import to avoid server initialization issues
-    const pdfParse = await import('pdf-parse').then(mod => mod.default);
-    return await pdfParse(buffer);
+    const pdfjsLib = await import('pdfjs-dist');
+    
+    // Load the PDF document
+    const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
+    const pdf = await loadingTask.promise;
+    
+    let fullText = '';
+    const numPages = pdf.numPages;
+    
+    // Extract text from each page
+    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(' ')
+        .trim();
+      
+      if (pageText) {
+        fullText += pageText + '\n';
+      }
+    }
+    
+    return {
+      numpages: numPages,
+      text: fullText.trim()
+    };
   } catch (error) {
     throw new Error(`PDF parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
@@ -127,7 +152,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<PDFUploadResp
     // Success response
     const response: PDFUploadResponse = {
       ok: true,
-      method: "pdf-parse",
+      method: "pdfjs-dist",
       pageCount: pdfData.numpages,
       bytes: buffer.length,
       text: extractedText

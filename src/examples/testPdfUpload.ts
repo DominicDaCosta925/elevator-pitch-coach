@@ -111,7 +111,7 @@ export function createPDFUploadForm(): HTMLFormElement {
         resultDiv.innerHTML = `
           <div style="color: green;">
             <h3>✅ Success!</h3>
-            <p><strong>Method:</strong> ${result.method}</p>
+            <p><strong>Method:</strong> ${result.method} (Mozilla PDF.js)</p>
             <p><strong>Pages:</strong> ${result.pageCount}</p>
             <p><strong>Size:</strong> ${result.bytes} bytes</p>
             <p><strong>Text length:</strong> ${result.text?.length} characters</p>
