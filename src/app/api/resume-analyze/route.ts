@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import mammoth from "mammoth";
+// Dynamic import for file-type to avoid module resolution issues
 
 export const runtime = "nodejs";
+
+// PDF parsing with proper error handling
+async function parsePDF(buffer: Buffer) {
+  try {
+    const pdfParse = await import('pdf-parse').then(mod => mod.default);
+    return await pdfParse(buffer);
+  } catch (error) {
+    throw new Error(`PDF parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
 
 async function extractTextFromFile(file: File): Promise<string> {
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -9,16 +20,33 @@ async function extractTextFromFile(file: File): Promise<string> {
 
   try {
     if (fileName.endsWith('.pdf')) {
-      // Temporarily disabled PDF support due to library issues
-      // You can upload a TXT or DOCX version of your resume instead
-      throw new Error('PDF support is temporarily disabled. Please upload your resume as a .txt or .docx file instead.');
+      // Robust PDF parsing with MIME validation
+      const fileType = await import("file-type");
+      const detectedFileType = await fileType.fromBuffer(buffer);
+      
+      if (!detectedFileType || detectedFileType.mime !== 'application/pdf') {
+        throw new Error('Invalid PDF file. File appears to be corrupted or not a valid PDF.');
+      }
+
+      const pdfData = await parsePDF(buffer);
+      
+      if (!pdfData.numpages || pdfData.numpages === 0) {
+        throw new Error('PDF appears to be empty (0 pages).');
+      }
+
+      const extractedText = pdfData.text?.trim() || "";
+      if (extractedText.length === 0) {
+        throw new Error('No text could be extracted from PDF. The file might be image-based or password-protected.');
+      }
+
+      return extractedText;
     } else if (fileName.endsWith('.docx')) {
       const result = await mammoth.extractRawText({ buffer });
       return result.value;
     } else if (fileName.endsWith('.txt')) {
       return buffer.toString('utf-8');
     } else {
-      throw new Error('Unsupported file type. Please upload a .txt or .docx file.');
+      throw new Error('Unsupported file type. Please upload a PDF, DOCX, or TXT file.');
     }
   } catch (error) {
     console.error('File extraction error:', error);
@@ -41,17 +69,18 @@ export async function POST(req: NextRequest) {
       type: file.type
     });
 
-    // Validate file type (temporarily no PDF support)
+    // Validate file type (PDF support now enabled)
     const validTypes = [
+      'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'text/plain'
     ];
     
-    const isValidExtension = file.name.toLowerCase().match(/\.(docx|txt)$/);
+    const isValidExtension = file.name.toLowerCase().match(/\.(pdf|docx|txt)$/);
     
     if (!validTypes.includes(file.type) && !isValidExtension) {
       return NextResponse.json({ 
-        error: "Please upload a DOCX or TXT file. PDF support is temporarily disabled." 
+        error: "Invalid file type. Please upload a PDF, DOCX, or TXT file." 
       }, { status: 400 });
     }
 
