@@ -3,6 +3,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, Copy, Clock, FileText, Sparkles, Loader2, Check, AlertCircle } from "lucide-react";
+import PitchLengthSlider from "./PitchLengthSlider";
 
 interface GeneratedPitchProps {
   pitch: string;
@@ -10,6 +11,9 @@ interface GeneratedPitchProps {
   isGenerating?: boolean;
   isAdjusting?: boolean;
   onPractice?: () => void;
+  onLengthChange?: (length: number) => void;
+  currentLength?: number;
+  onLengthUpdate?: (length: number) => void;
 }
 
 export default function GeneratedPitch({ 
@@ -17,8 +21,12 @@ export default function GeneratedPitch({
   targetSeconds,
   isGenerating = false,
   isAdjusting = false,
-  onPractice 
+  onPractice,
+  onLengthChange,
+  currentLength,
+  onLengthUpdate
 }: GeneratedPitchProps) {
+  const [isCopied, setIsCopied] = React.useState(false);
   
   const estimateReadingTime = (text: string) => {
     const wordsPerMinute = 150;
@@ -33,8 +41,23 @@ export default function GeneratedPitch({
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(pitch);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy text: ', err);
+      // Fallback for older browsers
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = pitch;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      } catch (fallbackErr) {
+        console.error('Fallback copy failed: ', fallbackErr);
+      }
     }
   };
 
@@ -162,6 +185,20 @@ export default function GeneratedPitch({
         </div>
       </motion.div>
 
+      {/* Length Adjustment Slider */}
+      {onLengthChange && currentLength && onLengthUpdate && (
+        <div className="space-y-4">
+          <h4 className="font-medium">Adjust Pitch Length</h4>
+          <PitchLengthSlider
+            value={currentLength}
+            onChange={onLengthUpdate}
+            onChangeComplete={onLengthChange}
+            disabled={isAdjusting}
+            isUpdating={isAdjusting}
+          />
+        </div>
+      )}
+
       {/* Stats and Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Stats */}
@@ -220,10 +257,19 @@ export default function GeneratedPitch({
             <button
               onClick={copyToClipboard}
               disabled={isAdjusting}
-              className="w-full border border-border bg-card hover:bg-accent text-foreground px-4 py-3 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+              className={`w-full border px-4 py-3 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 ${
+                isCopied 
+                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400' 
+                  : 'border-border bg-card hover:bg-accent text-foreground'
+              }`}
             >
-              <Copy className="w-5 h-5" />
-              Copy to Clipboard
+              <motion.div
+                animate={isCopied ? { scale: [1, 1.2, 1] } : {}}
+                transition={{ duration: 0.3 }}
+              >
+                {isCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+              </motion.div>
+              {isCopied ? 'Copied!' : 'Copy to Clipboard'}
             </button>
           </div>
           
