@@ -34,8 +34,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Current pitch is required" }, { status: 400 });
     }
 
-    if (!targetSeconds || targetSeconds < 10 || targetSeconds > 60) {
-      return NextResponse.json({ error: "Target seconds must be between 10 and 60" }, { status: 400 });
+    if (!targetSeconds || targetSeconds < 20 || targetSeconds > 90) {
+      return NextResponse.json({ error: "Target seconds must be between 20 and 90" }, { status: 400 });
     }
 
     console.log("Adjust pitch length:", {

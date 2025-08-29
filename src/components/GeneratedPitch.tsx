@@ -68,7 +68,7 @@ export default function GeneratedPitch({
 
       {/* Pitch Content */}
       <div className={`
-        relative p-6 bg-gray-50 rounded-2xl border
+        relative p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl border border-gray-200 shadow-sm
         ${isAdjusting ? 'opacity-60' : ''}
       `}>
         {isAdjusting && (
@@ -93,14 +93,14 @@ export default function GeneratedPitch({
             onClick={onPractice}
             disabled={isAdjusting}
             className={`
-              px-4 py-2 rounded-xl text-sm font-medium transition-colors
+              px-6 py-3 rounded-xl font-semibold transition-all duration-200 transform
               ${isAdjusting 
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:from-emerald-600 hover:to-green-600 hover:scale-105 shadow-lg hover:shadow-xl'
               }
             `}
           >
-            Practice This Pitch
+            🎙️ Practice This Pitch
           </button>
         )}
       </div>

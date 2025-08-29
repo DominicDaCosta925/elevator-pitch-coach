@@ -19,11 +19,11 @@ export default function Page() {
   // Resume-based pitch generation state
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [targetRole, setTargetRole] = useState("");
-  const [pitchLength, setPitchLength] = useState(30); // Default 30 seconds
+  const [pitchLength, setPitchLength] = useState(50); // Default 50 seconds
   const [generatedPitch, setGeneratedPitch] = useState("");
   const [isGeneratingPitch, setIsGeneratingPitch] = useState(false);
   const [isAdjustingPitch, setIsAdjustingPitch] = useState(false);
-  const [originalPitchLength, setOriginalPitchLength] = useState(30);
+  const [originalPitchLength, setOriginalPitchLength] = useState(50);
   
   const recorderRef = useRef<HTMLDivElement>(null);
 
@@ -170,151 +170,192 @@ export default function Page() {
   }
 
   return (
-    <main className="max-w-3xl mx-auto p-6 space-y-8">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold">🎤 Elevator Pitch Coach</h1>
-        <p className="text-gray-600">Generate a personalized pitch from your resume or practice an existing one</p>
-      </div>
-
-      {/* Resume-Based Pitch Generation Section */}
-      <section className="space-y-6 p-6 bg-blue-50 rounded-2xl border border-blue-200">
-        <div className="text-center space-y-2">
-          <h2 className="text-xl font-semibold text-blue-900">📄 Generate from Resume</h2>
-          <p className="text-sm text-blue-700">Don't have a pitch yet? Upload your resume and we'll create one for you!</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <main className="max-w-4xl mx-auto p-6 space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-4 py-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            🎤 Elevator Pitch Coach
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Generate a personalized pitch from your resume or practice an existing one
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <ResumeUploader 
-              onFileUploaded={setResumeFile} 
-              isProcessing={isGeneratingPitch}
-            />
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Target Role/Industry (optional)
-              </label>
-              <input
-                type="text"
-                value={targetRole}
-                onChange={(e) => setTargetRole(e.target.value)}
-                placeholder="e.g., Software Engineer, Marketing Manager"
-                disabled={isGeneratingPitch}
-                className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-              />
-              <p className="text-xs text-gray-500">
-                Help us tailor your pitch to specific roles or industries
+        {/* Resume-Based Pitch Generation Section */}
+        <section className="bg-white/70 backdrop-blur-sm border border-white/20 rounded-3xl shadow-xl overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-6 text-white">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold">📄 Generate from Resume</h2>
+              <p className="text-blue-100">
+                Don't have a pitch yet? Upload your resume and we'll create one for you!
               </p>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <PitchLengthSlider
-              value={pitchLength}
-              onChange={setPitchLength}
-              disabled={isGeneratingPitch}
-            />
-            
-            <button
-              onClick={handleGeneratePitch}
-              disabled={!resumeFile || isGeneratingPitch}
-              className={`
-                w-full py-3 px-4 rounded-xl font-medium transition-colors
-                ${resumeFile && !isGeneratingPitch
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }
-              `}
-            >
-              {isGeneratingPitch ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                  <span>Generating Pitch...</span>
+          <div className="p-8 space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <ResumeUploader 
+                  onFileUploaded={setResumeFile} 
+                  isProcessing={isGeneratingPitch}
+                />
+                
+                <div className="space-y-3">
+                  <label className="text-sm font-semibold text-gray-800">
+                    Target Role/Industry (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={targetRole}
+                    onChange={(e) => setTargetRole(e.target.value)}
+                    placeholder="e.g., Software Engineer, Marketing Manager"
+                    disabled={isGeneratingPitch}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 bg-white"
+                  />
+                  <p className="text-sm text-gray-600">
+                    💡 Help us tailor your pitch to specific roles or industries
+                  </p>
                 </div>
-              ) : (
-                'Generate Pitch'
-              )}
-            </button>
-          </div>
-        </div>
+              </div>
 
-        {generatedPitch && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Adjust Pitch Length</h3>
-              <span className="text-sm text-gray-600">Drag to change, auto-updates on release</span>
+              <div className="space-y-6">
+                <PitchLengthSlider
+                  value={pitchLength}
+                  onChange={setPitchLength}
+                  disabled={isGeneratingPitch}
+                />
+                
+                <button
+                  onClick={handleGeneratePitch}
+                  disabled={!resumeFile || isGeneratingPitch}
+                  className={`
+                    w-full py-4 px-6 rounded-2xl font-semibold text-lg transition-all duration-200 transform
+                    ${resumeFile && !isGeneratingPitch
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 hover:scale-105 shadow-lg hover:shadow-xl'
+                      : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    }
+                  `}
+                >
+                  {isGeneratingPitch ? (
+                    <div className="flex items-center justify-center space-x-3">
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                      <span>Generating Your Perfect Pitch...</span>
+                    </div>
+                  ) : (
+                    '✨ Generate Pitch'
+                  )}
+                </button>
+              </div>
             </div>
-            
-            <PitchLengthSlider
-              value={pitchLength}
-              onChange={setPitchLength}
-              onChangeComplete={handlePitchLengthChange}
-              disabled={isGeneratingPitch}
-              isUpdating={isAdjustingPitch}
-            />
-            
-            <GeneratedPitch
-              pitch={generatedPitch}
-              targetSeconds={pitchLength}
-              isGenerating={isGeneratingPitch}
-              isAdjusting={isAdjustingPitch}
-              onPractice={handlePracticeGenerated}
-            />
+
+            {generatedPitch && (
+              <div className="space-y-6 pt-8 border-t border-gray-200">
+                <div className="text-center">
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">Adjust Pitch Length</h3>
+                  <p className="text-gray-600">Drag to change length, auto-updates when you release</p>
+                </div>
+                
+                <PitchLengthSlider
+                  value={pitchLength}
+                  onChange={setPitchLength}
+                  onChangeComplete={handlePitchLengthChange}
+                  disabled={isGeneratingPitch}
+                  isUpdating={isAdjustingPitch}
+                />
+                
+                <GeneratedPitch
+                  pitch={generatedPitch}
+                  targetSeconds={pitchLength}
+                  isGenerating={isGeneratingPitch}
+                  isAdjusting={isAdjustingPitch}
+                  onPractice={handlePracticeGenerated}
+                />
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Practice Section */}
+        <section ref={recorderRef} className="bg-white/70 backdrop-blur-sm border border-white/20 rounded-3xl shadow-xl overflow-hidden">
+          <div className="bg-gradient-to-r from-emerald-500 to-green-500 p-6 text-white">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold">🎙️ Practice & Get Feedback</h2>
+              <p className="text-emerald-100">
+                Record yourself practicing your pitch to get personalized coaching
+              </p>
+            </div>
+          </div>
+          
+          <div className="p-8 space-y-6">
+            <Recorder onRecorded={handleRecorded} maxSeconds={30} />
+            {loading && (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent mr-3"></div>
+                <span className="text-lg text-gray-700">Analyzing your pitch...</span>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 shadow-lg">
+            <h3 className="font-semibold text-red-800 mb-2">⚠️ Error</h3>
+            <p className="text-red-700">{error}</p>
           </div>
         )}
-      </section>
 
-      {/* Practice Section */}
-      <section ref={recorderRef} className="space-y-4 p-6 bg-green-50 rounded-2xl border border-green-200">
-        <div className="text-center space-y-2">
-          <h2 className="text-xl font-semibold text-green-900">🎙️ Practice & Get Feedback</h2>
-          <p className="text-sm text-green-700">Record yourself practicing your pitch to get personalized coaching</p>
-        </div>
-        
-        <Recorder onRecorded={handleRecorded} maxSeconds={30} />
-        {loading && <p className="text-gray-500">Analyzing…</p>}
-      </section>
-      
-      {error && (
-        <div className="p-4 rounded-2xl border border-red-200 bg-red-50">
-          <h3 className="font-semibold text-red-800 mb-2">⚠️ Error</h3>
-          <p className="text-sm text-red-700">{error}</p>
-        </div>
-      )}
+        {/* Results Section */}
+        {(metrics || transcript || coach) && (
+          <section className="bg-white/70 backdrop-blur-sm border border-white/20 rounded-3xl shadow-xl overflow-hidden">
+            <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-6 text-white">
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-bold">📊 Your Results</h2>
+                <p className="text-purple-100">
+                  Here's your performance analysis and coaching feedback
+                </p>
+              </div>
+            </div>
 
-      {metrics && <ScoreCard m={metrics} />}
+            <div className="p-8 space-y-8">
+              {metrics && <ScoreCard m={metrics} />}
 
-      {transcript && (
-        <section className="p-4 rounded-2xl border">
-          <h3 className="font-semibold mb-2">Transcript</h3>
-          <p className="text-sm whitespace-pre-wrap">{transcript}</p>
-        </section>
-      )}
+              {transcript && (
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border border-gray-200">
+                  <h3 className="font-semibold text-gray-800 mb-3">📝 Transcript</h3>
+                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{transcript}</p>
+                </div>
+              )}
 
-      {coach && (
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 rounded-2xl border">
-            <h3 className="font-semibold mb-2">Strengths</h3>
-            <ul className="list-disc pl-5 text-sm">
-              {coach.strengths?.map((s: string, i: number) => <li key={i}>{s}</li>)}
-            </ul>
-          </div>
-          <div className="p-4 rounded-2xl border">
-            <h3 className="font-semibold mb-2">Improvements</h3>
-            <ul className="list-disc pl-5 text-sm">
-              {coach.improvements?.map((s: string, i: number) => <li key={i}>{s}</li>)}
-            </ul>
-          </div>
-          <div className="p-4 rounded-2xl border md:col-span-2">
-            <h3 className="font-semibold mb-2">Polished Script</h3>
-            <p className="text-sm whitespace-pre-wrap">{coach.polishedScript}</p>
-          </div>
-          <div className="p-4 rounded-2xl border md:col-span-2">
-            <h3 className="font-semibold mb-2">LinkedIn “About”</h3>
-            <p className="text-sm whitespace-pre-wrap">{coach.aboutRewrite}</p>
-          </div>
-        </section>
-      )}
-    </main>
+              {coach && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-green-50 border border-green-200 rounded-2xl p-6">
+                    <h3 className="font-semibold text-green-800 mb-3">💪 Strengths</h3>
+                    <ul className="list-disc pl-5 text-green-700 space-y-1">
+                      {coach.strengths?.map((s: string, i: number) => <li key={i}>{s}</li>)}
+                    </ul>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+                    <h3 className="font-semibold text-blue-800 mb-3">🎯 Improvements</h3>
+                    <ul className="list-disc pl-5 text-blue-700 space-y-1">
+                      {coach.improvements?.map((s: string, i: number) => <li key={i}>{s}</li>)}
+                    </ul>
+                  </div>
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-6 md:col-span-2">
+                    <h3 className="font-semibold text-indigo-800 mb-3">✨ Polished Script</h3>
+                    <p className="text-indigo-700 whitespace-pre-wrap leading-relaxed">{coach.polishedScript}</p>
+                  </div>
+                  <div className="bg-purple-50 border border-purple-200 rounded-2xl p-6 md:col-span-2">
+                    <h3 className="font-semibold text-purple-800 mb-3">💼 LinkedIn "About"</h3>
+                    <p className="text-purple-700 whitespace-pre-wrap leading-relaxed">{coach.aboutRewrite}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+      </main>
+    </div>
   );
 }

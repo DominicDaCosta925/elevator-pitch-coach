@@ -82,8 +82,8 @@ export default function ResumeUploader({ onFileUploaded, isProcessing = false }:
         />
         
         <div className="space-y-4">
-          <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
           </div>
@@ -104,13 +104,13 @@ export default function ResumeUploader({ onFileUploaded, isProcessing = false }:
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="text-lg font-medium text-gray-900">
+              <p className="text-lg font-semibold text-gray-800">
                 Upload Your Resume
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-gray-700">
                 Drag and drop your resume here, or click to browse
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-sm text-gray-600">
                 Supports PDF, DOCX, and TXT files
               </p>
             </div>
