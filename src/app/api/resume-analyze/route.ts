@@ -1,52 +1,70 @@
 import { NextRequest, NextResponse } from "next/server";
 import mammoth from "mammoth";
 // Dynamic import for file-type to avoid module resolution issues
+// UPDATED: Using pdf2json for pure JavaScript PDF parsing
 
 export const runtime = "nodejs";
 
-// PDF parsing with pdf-text-extract (Node.js compatible)
+// PDF parsing with pdf2json (pure JavaScript, no external dependencies)
 async function parsePDF(buffer: Buffer): Promise<{ numpages: number; text: string }> {
   return new Promise((resolve, reject) => {
     try {
-      // Use dynamic import for pdf-text-extract
-      import('pdf-text-extract').then((pdfTextExtract) => {
-        const extract = pdfTextExtract.default || pdfTextExtract;
+      // Use dynamic import for pdf2json
+      import('pdf2json').then((pdf2jsonModule) => {
+        const PDFParser = pdf2jsonModule.default;
+        const pdfParser = new PDFParser();
         
-        // Write buffer to a temporary file for processing
-        const fs = require('fs');
-        const path = require('path');
-        const os = require('os');
-        
-        const tempFile = path.join(os.tmpdir(), `pdf-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.pdf`);
-        
-        fs.writeFileSync(tempFile, buffer);
-        
-        // Extract text from the temporary file
-        extract(tempFile, { splitPages: false }, (err: any, pages: string[]) => {
-          // Clean up temporary file
-          try {
-            fs.unlinkSync(tempFile);
-          } catch (cleanupError) {
-            console.warn('Could not clean up temp file:', cleanupError);
-          }
-          
-          if (err) {
-            reject(new Error(`PDF text extraction failed: ${err.message || err}`));
-            return;
-          }
-          
-          if (!pages || pages.length === 0) {
-            reject(new Error('No text could be extracted from PDF'));
-            return;
-          }
-          
-          const fullText = Array.isArray(pages) ? pages.join('\n').trim() : String(pages).trim();
-          
-          resolve({
-            numpages: Array.isArray(pages) ? pages.length : 1,
-            text: fullText
-          });
+        pdfParser.on("pdfParser_dataError", (errData: any) => {
+          reject(new Error(`PDF parsing failed: ${errData.parserError || errData}`));
         });
+        
+        pdfParser.on("pdfParser_dataReady", (pdfData: any) => {
+          try {
+            let fullText = '';
+            let pageCount = 0;
+            
+            if (pdfData && pdfData.Pages) {
+              pageCount = pdfData.Pages.length;
+              
+              // Extract text from each page
+              for (const page of pdfData.Pages) {
+                if (page.Texts) {
+                  for (const text of page.Texts) {
+                    if (text.R) {
+                      for (const run of text.R) {
+                        if (run.T) {
+                          // Decode URI-encoded text
+                          const decodedText = decodeURIComponent(run.T);
+                          fullText += decodedText + ' ';
+                        }
+                      }
+                    }
+                  }
+                  fullText += '\n'; // Add line break after each page
+                }
+              }
+            }
+            
+            const cleanText = fullText.trim().replace(/\s+/g, ' ');
+            
+            if (!cleanText) {
+              reject(new Error('No text could be extracted from PDF'));
+              return;
+            }
+            
+            resolve({
+              numpages: pageCount || 1,
+              text: cleanText
+            });
+            
+          } catch (parseError) {
+            reject(new Error(`PDF data processing failed: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`));
+          }
+        });
+        
+        // Parse the PDF buffer
+        pdfParser.parseBuffer(buffer);
+        
       }).catch((importError) => {
         reject(new Error(`PDF parsing module import failed: ${importError.message}`));
       });

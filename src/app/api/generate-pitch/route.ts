@@ -105,8 +105,21 @@ Target: ${targetSeconds} seconds${targetRole ? ` for ${targetRole} roles` : ''}`
         estimatedWords: pitch.trim().split(/\s+/).length
       });
 
-    } catch (openaiError) {
+    } catch (openaiError: any) {
       console.error("OpenAI error in generate-pitch:", openaiError);
+      
+      // Handle rate limit specifically
+      if (openaiError?.error?.code === 'rate_limit_exceeded') {
+        console.warn("Rate limit exceeded, using mock pitch");
+        return NextResponse.json({ 
+          pitch: getMockPitch(targetSeconds, targetRole),
+          targetSeconds,
+          estimatedWords: targetWords,
+          fallback: true,
+          message: "Using sample pitch due to rate limits. Generated content will be available once limits reset."
+        });
+      }
+      
       return NextResponse.json({ 
         pitch: getMockPitch(targetSeconds, targetRole),
         targetSeconds,
