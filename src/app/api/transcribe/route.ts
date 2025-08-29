@@ -1,70 +1,55 @@
-// src/app/api/transcribe/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { toFile } from "openai/uploads";
 
 export const runtime = "nodejs";
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
+    // Read the body ONCE
     const formData = await req.formData();
-    const file = formData.get("file") as unknown as File | null;
+    const file = formData.get("file") as File | null;
     const durationSec = Number(formData.get("durationSec") || 0);
+    if (!file) return NextResponse.json({ error: "missing file" }, { status: 400 });
 
-    if (!file) {
-      return NextResponse.json({ error: "missing file" }, { status: 400 });
+    // Buffer the incoming file and build a reusable File
+    const buf = Buffer.from(await file.arrayBuffer());
+    const filename = (file as any).name || `rec-${Date.now()}.webm`;
+    const mime = file.type || "audio/webm";
+    console.log("Transcribe API: received", { filename, mime, durationSec, size: buf.length });
+
+    const ofile = new File([buf], filename, { type: mime });
+
+    // Attempt 1: gpt-4o-mini-transcribe (fast)
+    try {
+      const tr = await openai.audio.transcriptions.create({
+        model: "gpt-4o-mini-transcribe",
+        file: ofile,
+        language: "en",
+        temperature: 0,
+      } as any);
+      console.log("Transcribe text (4o-mini):", JSON.stringify(tr.text));
+      return NextResponse.json({ text: tr.text ?? "" });
+    } catch (e: any) {
+      console.log("First attempt failed", { status: e?.status, code: e?.code, message: e?.message });
     }
 
-    // Convert browser File -> Node-readable file
-    const bytes = await file.arrayBuffer();
-    const ofile = await toFile(Buffer.from(bytes), file.name || "audio.webm", {
-      type: file.type || "audio/webm",
-    });
-
-    // Transcribe with GPT-4o mini transcribe (faster, very accurate)
-    const tr = await openai.audio.transcriptions.create({
-      model: "gpt-4o-mini-transcribe",
-      file: ofile,
-      // Optional extras:
-      // language: "en",            // hint language if you want
-      // response_format: "json",   // default is fine
-      // temperature: 0,            // keep it literal
-    });
-
-    // `text` is the full transcript
-    const transcript = (tr as any).text ?? "";
-    const wordCount = transcript.trim() ? transcript.trim().split(/\s+/).length : 0;
-
-    return NextResponse.json({ transcript, durationSec, wordCount });
-  } catch (err) {
-    console.error("transcribe error:", err);
-    // Fallback to whisper-1 if needed (useful if your account/model access is limited)
+    // Attempt 2: whisper-1 (fallback)
     try {
-      const formData = await req.formData();
-      const file = formData.get("file") as unknown as File | null;
-      const durationSec = Number(formData.get("durationSec") || 0);
-      if (!file) return NextResponse.json({ error: "missing file" }, { status: 400 });
-
-      const bytes = await file.arrayBuffer();
-      const ofile = await toFile(Buffer.from(bytes), file.name || "audio.webm", {
-        type: file.type || "audio/webm",
-      });
-
-      const w = await openai.audio.transcriptions.create({
+      const tr = await openai.audio.transcriptions.create({
         model: "whisper-1",
         file: ofile,
-      });
-
-      const transcript = (w as any).text ?? "";
-      const wordCount = transcript.trim() ? transcript.trim().split(/\s+/).length : 0;
-      return NextResponse.json({ transcript, durationSec, wordCount, model: "whisper-1" });
-    } catch (fallbackErr) {
-      console.error("fallback transcribe error:", fallbackErr);
-      return NextResponse.json({ error: "transcription failed" }, { status: 500 });
+        language: "en",
+        temperature: 0,
+      } as any);
+      console.log("Transcribe text (whisper-1):", JSON.stringify(tr.text));
+      return NextResponse.json({ text: tr.text ?? "" });
+    } catch (e: any) {
+      console.log("Fallback attempt failed", { status: e?.status, code: e?.code, message: e?.message });
+      return NextResponse.json({ text: "" }); // graceful empty transcript
     }
+  } catch (err: any) {
+    console.error("Transcribe API fatal error:", err);
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
   }
 }

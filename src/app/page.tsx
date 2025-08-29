@@ -12,6 +12,23 @@ export default function Page() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  async function uploadBlob(blob: Blob, durationSec: number) {
+    // Fresh File for each request (prevents stale metadata/caching)
+    const file = new File([blob], `rec-${Date.now()}.webm`, { type: "audio/webm" });
+    const form = new FormData();
+    form.append("file", file);
+    form.append("durationSec", String(durationSec));
+
+    const res = await fetch("/api/transcribe", {
+      method: "POST",
+      body: form,
+      cache: "no-store", // prevent request caching
+    });
+    if (!res.ok) throw new Error(`transcribe failed: ${res.status}`);
+    const data = await res.json();
+    return data.text as string;
+  }
+
   async function handleRecorded(blob: Blob, durationSec: number) {
     try {
       setLoading(true);
@@ -21,34 +38,23 @@ export default function Page() {
       setError(null);
 
       // 1) Transcribe
-      const fd = new FormData();
-      fd.append("file", blob);
-      fd.append("durationSec", String(durationSec));
-      const tRes = await fetch("/api/transcribe", { method: "POST", body: fd });
-      const tJson = await tRes.json();
+      const transcriptText = await uploadBlob(blob, durationSec);
       
-      if (!tRes.ok || "error" in tJson) {
-        console.error("Transcription failed:", tJson.error || "Unknown error");
-        setError("Sorry, we couldn't transcribe your audio. Please try again.");
-        return;
-      }
-
-      // Guard against missing transcript
-      if (!tJson.transcript || typeof tJson.transcript !== "string") {
+      if (!transcriptText || typeof transcriptText !== "string") {
         console.error("No transcript received from API");
         setError("No transcript was generated. Please try recording again.");
         return;
       }
 
-      setTranscript(tJson.transcript);
-      const m = computeMetrics(tJson.transcript, durationSec);
+      setTranscript(transcriptText);
+      const m = computeMetrics(transcriptText, durationSec);
       setMetrics(m);
 
       // 2) Coach
       const cRes = await fetch("/api/coach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript: tJson.transcript, metrics: m }),
+        body: JSON.stringify({ transcript: transcriptText, metrics: m }),
       });
       const cJson = await cRes.json();
       setCoach(cJson);
