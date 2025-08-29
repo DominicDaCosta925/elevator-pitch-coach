@@ -1,5 +1,9 @@
 "use client";
+
 import React, { useCallback, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Upload, FileText, File, Check, X, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ResumeUploaderProps {
   onFileUploaded: (file: File) => void;
@@ -9,10 +13,12 @@ interface ResumeUploaderProps {
 export default function ResumeUploader({ onFileUploaded, isProcessing = false }: ResumeUploaderProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragOver(false);
+    setUploadError(null);
     
     const files = Array.from(e.dataTransfer.files);
     const validFile = files.find(file => 
@@ -25,10 +31,14 @@ export default function ResumeUploader({ onFileUploaded, isProcessing = false }:
     );
 
     if (validFile) {
+      if (validFile.size > 10 * 1024 * 1024) { // 10MB limit
+        setUploadError('File too large. Please upload a file smaller than 10MB.');
+        return;
+      }
       setSelectedFile(validFile);
       onFileUploaded(validFile);
     } else {
-      alert('Please upload a PDF, DOCX, or TXT file.');
+      setUploadError('Please upload a PDF, DOCX, or TXT file.');
     }
   }, [onFileUploaded]);
 
@@ -44,11 +54,29 @@ export default function ResumeUploader({ onFileUploaded, isProcessing = false }:
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    setUploadError(null);
+    
     if (file) {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        setUploadError('File too large. Please upload a file smaller than 10MB.');
+        return;
+      }
       setSelectedFile(file);
       onFileUploaded(file);
     }
   }, [onFileUploaded]);
+
+  const removeFile = useCallback(() => {
+    setSelectedFile(null);
+    setUploadError(null);
+  }, []);
+
+  const getFileIcon = (fileName: string) => {
+    if (fileName.endsWith('.pdf')) return <FileText className="w-6 h-6 text-red-500" />;
+    if (fileName.endsWith('.docx')) return <File className="w-6 h-6 text-blue-500" />;
+    if (fileName.endsWith('.txt')) return <File className="w-6 h-6 text-gray-500" />;
+    return <File className="w-6 h-6 text-gray-500" />;
+  };
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -59,15 +87,20 @@ export default function ResumeUploader({ onFileUploaded, isProcessing = false }:
   };
 
   return (
-    <div className="w-full">
-      <div
+    <div className="space-y-4">
+      {/* Upload Area */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
         className={`
-          relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-200
+          relative border-2 border-dashed rounded-2xl p-8 transition-all duration-300 cursor-pointer
           ${isDragOver 
-            ? 'border-blue-400 bg-blue-50' 
-            : 'border-gray-300 hover:border-gray-400'
+            ? 'border-blue-400 bg-blue-50 scale-[1.02]' 
+            : selectedFile 
+            ? 'border-green-300 bg-green-50' 
+            : 'border-slate-300 bg-slate-50 hover:border-slate-400 hover:bg-slate-100'
           }
-          ${isProcessing ? 'opacity-50 pointer-events-none' : ''}
+          ${isProcessing ? 'pointer-events-none opacity-60' : ''}
         `}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -81,56 +114,125 @@ export default function ResumeUploader({ onFileUploaded, isProcessing = false }:
           disabled={isProcessing}
         />
         
-        <div className="space-y-4">
-          <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-          </div>
-          
+        <AnimatePresence mode="wait">
           {selectedFile ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-900">
-                📄 {selectedFile.name}
-              </p>
-              <p className="text-xs text-gray-500">
-                {formatFileSize(selectedFile.size)}
-              </p>
-              {!isProcessing && (
-                <p className="text-xs text-green-600">
-                  ✓ Ready to generate pitch
-                </p>
-              )}
-            </div>
+            <motion.div
+              key="selected"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="flex items-center justify-between"
+            >
+              <div className="flex items-center gap-4">
+                {getFileIcon(selectedFile.name)}
+                <div>
+                  <p className="font-medium text-slate-800 truncate max-w-xs">
+                    {selectedFile.name}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    {formatFileSize(selectedFile.size)}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {isProcessing ? (
+                  <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                ) : (
+                  <>
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <Check className="w-4 h-4 text-green-600" />
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFile();
+                      }}
+                      className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors"
+                    >
+                      <X className="w-4 h-4 text-red-600" />
+                    </button>
+                  </>
+                )}
+              </div>
+            </motion.div>
           ) : (
-            <div className="space-y-2">
-              <p className="text-lg font-semibold text-gray-800">
-                Upload Your Resume
-              </p>
-              <p className="text-gray-700">
-                Drag and drop your resume here, or click to browse
-              </p>
-              <p className="text-sm text-gray-600">
-                Supports PDF, DOCX, and TXT files
-              </p>
-            </div>
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="text-center space-y-4"
+            >
+              <motion.div
+                animate={isDragOver ? { scale: 1.1 } : { scale: 1 }}
+                className={`
+                  mx-auto w-16 h-16 rounded-2xl flex items-center justify-center transition-colors
+                  ${isDragOver ? 'bg-blue-100' : 'bg-slate-100'}
+                `}
+              >
+                <Upload className={`w-8 h-8 ${isDragOver ? 'text-blue-600' : 'text-slate-600'}`} />
+              </motion.div>
+              
+              <div>
+                <p className="text-lg font-medium text-slate-800 mb-2">
+                  Upload Your Resume
+                </p>
+                <p className="text-slate-600 mb-2">
+                  Drag and drop your resume here, or click to browse
+                </p>
+                <p className="text-sm text-slate-500">
+                  Supports PDF, DOCX, and TXT files (max 10MB)
+                </p>
+              </div>
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
+      </motion.div>
+
+      {/* Error Display */}
+      <AnimatePresence>
+        {uploadError && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="bg-red-50 border border-red-200 rounded-xl p-4"
+          >
+            <div className="flex items-center gap-2">
+              <X className="w-4 h-4 text-red-500 flex-shrink-0" />
+              <p className="text-red-700 text-sm">{uploadError}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Processing Indicator */}
+      <AnimatePresence>
+        {isProcessing && selectedFile && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-blue-50 border border-blue-200 rounded-xl p-4"
+          >
+            <div className="flex items-center gap-3">
+              <Loader2 className="w-5 h-5 text-blue-600 animate-spin flex-shrink-0" />
+              <div>
+                <p className="text-blue-800 font-medium">Processing your resume...</p>
+                <p className="text-blue-600 text-sm">This may take a few moments</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* File Type Info */}
+      <div className="text-center">
+        <p className="text-xs text-slate-500">
+          Supported formats: PDF for formatted documents, DOCX for Word documents, TXT for plain text
+        </p>
       </div>
-      
-      {selectedFile && !isProcessing && (
-        <button
-          onClick={() => {
-            setSelectedFile(null);
-            // Reset file input
-            const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-            if (fileInput) fileInput.value = '';
-          }}
-          className="mt-2 text-sm text-gray-500 hover:text-gray-700 underline"
-        >
-          Choose different file
-        </button>
-      )}
     </div>
   );
 }

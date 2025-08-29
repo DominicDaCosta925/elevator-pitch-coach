@@ -1,5 +1,9 @@
 "use client";
-import React, { useMemo, useCallback } from "react";
+
+import React, { useMemo, useCallback, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Clock, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface PitchLengthSliderProps {
   value: number; // seconds
@@ -19,6 +23,7 @@ export default function PitchLengthSlider({
   const MIN_SECONDS = 20;
   const MAX_SECONDS = 90;
   const STEP = 5;
+  const [isDragging, setIsDragging] = useState(false);
 
   const pct = useMemo(() => {
     return ((value - MIN_SECONDS) / (MAX_SECONDS - MIN_SECONDS)) * 100;
@@ -34,9 +39,9 @@ export default function PitchLengthSlider({
   const { low, high } = estimateWordsRange(value);
 
   const presets = [
-    { label: "Quick Intro", value: 20 },
-    { label: "Balanced", value: 50 },
-    { label: "Full Story", value: 90 },
+    { label: "Quick Intro", value: 20, description: "Brief introduction" },
+    { label: "Balanced", value: 50, description: "Standard pitch" },
+    { label: "Full Story", value: 90, description: "Detailed narrative" },
   ];
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,62 +49,65 @@ export default function PitchLengthSlider({
     onChange(newValue);
   }, [onChange]);
 
+  const handleMouseDown = useCallback(() => {
+    setIsDragging(true);
+  }, []);
+
   const handleMouseUp = useCallback(() => {
-    if (!disabled) {
-      onChangeComplete?.(value);
+    setIsDragging(false);
+    if (!disabled && onChangeComplete) {
+      onChangeComplete(value);
     }
-  }, [disabled, value, onChangeComplete]);
+  }, [disabled, onChangeComplete, value]);
+
+  const handlePresetClick = useCallback((presetValue: number) => {
+    if (!disabled) {
+      onChange(presetValue);
+      onChangeComplete?.(presetValue);
+    }
+  }, [disabled, onChange, onChangeComplete]);
+
+  const getSliderColor = () => {
+    if (value <= 30) return "from-green-400 to-green-600";
+    if (value <= 60) return "from-blue-400 to-blue-600";
+    return "from-purple-400 to-purple-600";
+  };
+
+  const getThumbPosition = () => {
+    return `calc(${pct}% - 16px)`;
+  };
 
   return (
-    <div className="w-full space-y-4">
-      <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-gray-900">
-          Pitch Length
-        </label>
-        <div className="flex items-center space-x-2">
-          {isUpdating && (
-            <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
-          )}
-        </div>
-      </div>
-
-      {/* Preset chips */}
-      <div className="flex flex-wrap gap-2">
-        {presets.map((p) => (
-          <button
-            key={p.value}
-            type="button"
-            onClick={() => {
-              onChange(p.value);
-              if (!disabled) {
-                onChangeComplete?.(p.value);
-              }
-            }}
-            disabled={disabled}
-            className={`px-3 py-1.5 rounded-full text-sm border transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 disabled:opacity-50 ${
-              value === p.value
-                ? "bg-blue-600 text-white border-transparent"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-            }`}
-            aria-pressed={value === p.value}
-          >
-            {p.label} • {p.value}s
-          </button>
+    <div className="space-y-6">
+      {/* Preset Chips */}
+      <div className="flex flex-wrap justify-center gap-3">
+        {presets.map((preset) => (
+          <motion.div key={preset.value} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              variant={value === preset.value ? "primary" : "outline"}
+              size="sm"
+              onClick={() => handlePresetClick(preset.value)}
+              disabled={disabled || isUpdating}
+              className="text-xs"
+            >
+              {preset.label} • {preset.value}s
+            </Button>
+          </motion.div>
         ))}
       </div>
 
-      {/* Slider wrapper */}
-      <div className="relative pt-8 pb-10">
-        {/* Track background with gradient indicating detail density */}
-        <div
-          className="absolute left-0 right-0 h-3 rounded-full"
-          style={{
-            background:
-              "linear-gradient(90deg, rgba(59,130,246,0.3) 0%, rgba(59,130,246,0.6) 50%, rgba(59,130,246,1) 100%)",
-          }}
-        />
+      {/* Slider Container */}
+      <div className="relative px-4">
+        {/* Track Background */}
+        <div className="relative h-3 bg-slate-200 rounded-full overflow-hidden">
+          {/* Gradient Track */}
+          <motion.div
+            className={`h-full bg-gradient-to-r ${getSliderColor()} transition-all duration-300`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
 
-        {/* Native range input */}
+        {/* Range Input */}
         <input
           type="range"
           min={MIN_SECONDS}
@@ -107,61 +115,108 @@ export default function PitchLengthSlider({
           step={STEP}
           value={value}
           onChange={handleChange}
+          onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
+          onTouchStart={handleMouseDown}
           onTouchEnd={handleMouseUp}
-          disabled={disabled}
-          aria-label="Elevator pitch length in seconds"
-          className="w-full appearance-none bg-transparent relative z-10 focus:outline-none disabled:opacity-50"
-          style={{ 
-            height: 0,
-            WebkitAppearance: 'none',
-          }}
+          disabled={disabled || isUpdating}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+          aria-label="Pitch length in seconds"
         />
 
-        {/* Custom thumb + tooltip */}
-        <div
-          className="pointer-events-none absolute -top-2 transition-all duration-150"
-          style={{ left: `calc(${pct}% - 16px)` }}
-          aria-hidden
+        {/* Custom Thumb */}
+        <motion.div
+          className={`
+            absolute top-1/2 -translate-y-1/2 w-8 h-8 rounded-full shadow-lg border-4 border-white
+            ${disabled || isUpdating ? 'bg-slate-400' : 'bg-white'}
+            transition-all duration-200 pointer-events-none
+          `}
+          style={{ left: getThumbPosition() }}
+          animate={{
+            scale: isDragging ? 1.2 : 1,
+            boxShadow: isDragging 
+              ? "0 8px 25px rgba(0, 0, 0, 0.15)" 
+              : "0 4px 15px rgba(0, 0, 0, 0.1)"
+          }}
         >
-          {/* Thumb visualization with stopwatch icon */}
-          <div className="w-8 h-8 rounded-full bg-white border-2 border-blue-600 shadow-lg flex items-center justify-center">
-            <span className="text-xs">⏱️</span>
+          {/* Thumb Icon */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Clock className={`w-4 h-4 ${disabled || isUpdating ? 'text-slate-500' : 'text-slate-700'}`} />
           </div>
-          {/* Tooltip above thumb */}
-          <div className="-mt-10 mb-1 px-2 py-1 rounded-md bg-gray-900 text-white text-xs text-center shadow-lg whitespace-nowrap">
-            {value}s
-          </div>
-        </div>
+        </motion.div>
 
-        {/* Tick marks and semantic labels */}
-        <div className="absolute -bottom-8 left-0 right-0 flex justify-between text-xs text-gray-600">
+        {/* Live Seconds Display */}
+        <motion.div
+          className="absolute -top-12 bg-slate-900 text-white px-3 py-1 rounded-lg text-sm font-medium shadow-lg"
+          style={{ left: getThumbPosition() }}
+          animate={{
+            scale: isDragging ? 1.1 : 1,
+            opacity: isDragging ? 1 : 0.8,
+          }}
+        >
+          <div className="text-center">
+            {value}s
+            {isUpdating && (
+              <Loader2 className="w-3 h-3 animate-spin inline ml-1" />
+            )}
+          </div>
+          {/* Tooltip Arrow */}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900" />
+        </motion.div>
+
+        {/* Tick marks and labels */}
+        <div className="absolute -bottom-8 left-0 right-0 flex justify-between text-xs text-slate-600">
           <div className="flex flex-col items-start">
-            <div className="w-px h-3 bg-gray-400 mb-1" />
-            <span className="font-medium">Quick Intro</span>
-            <span className="text-gray-400">20s</span>
+            <div className="w-px h-3 bg-slate-400 mb-1" />
+            <div className="text-center">
+              <div className="font-medium">Quick Intro</div>
+              <div className="text-slate-500">20s</div>
+            </div>
           </div>
           <div className="flex flex-col items-center">
-            <div className="w-px h-3 bg-gray-400 mb-1" />
-            <span className="font-medium">Balanced Pitch</span>
-            <span className="text-gray-400">~50s</span>
+            <div className="w-px h-3 bg-slate-400 mb-1" />
+            <div className="text-center">
+              <div className="font-medium">Balanced Pitch</div>
+              <div className="text-slate-500">~50s</div>
+            </div>
           </div>
           <div className="flex flex-col items-end">
-            <div className="w-px h-3 bg-gray-400 mb-1" />
-            <span className="font-medium">Full Story</span>
-            <span className="text-gray-400">90s</span>
+            <div className="w-px h-3 bg-slate-400 mb-1" />
+            <div className="text-center">
+              <div className="font-medium">Full Story</div>
+              <div className="text-slate-500">90s</div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Word count estimate + helper text */}
-      <div className="space-y-2">
-        <div className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
-          <span className="text-sm text-gray-600">Estimated length:</span>
-          <span className="font-medium text-gray-900">~{low}–{high} words</span>
+      {/* Word Count Estimate */}
+      <motion.div
+        layout
+        className="flex justify-center"
+      >
+        <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 shadow-sm">
+          <Clock className="w-4 h-4 text-slate-500" />
+          <span className="text-sm text-slate-600">Estimated length:</span>
+          <span className="font-medium text-slate-900">~{low}–{high} words</span>
+          <AnimatePresence>
+            {isUpdating && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+              >
+                <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-        <p className="text-xs text-gray-500">
-          💡 Most pitches work best between 45–60 seconds. You can always adjust after generation.
+      </motion.div>
+
+      {/* Helper Text */}
+      <div className="text-center">
+        <p className="text-xs text-slate-500 max-w-md mx-auto">
+          Most effective pitches are 45-60 seconds. You can always adjust the length after generation.
         </p>
       </div>
     </div>

@@ -1,5 +1,9 @@
 "use client";
+
 import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Mic, Copy, Clock, FileText, Sparkles, Loader2, Check, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface GeneratedPitchProps {
   pitch: string;
@@ -23,112 +27,248 @@ export default function GeneratedPitch({
     return Math.round((wordCount / wordsPerMinute) * 60);
   };
 
-  const actualSeconds = estimateReadingTime(pitch);
+  const getWordCount = (text: string) => {
+    return text.trim().split(/\s+/).length;
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(pitch);
+      // Could add a toast notification here
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
 
   if (isGenerating) {
     return (
-      <div className="w-full p-8 border-2 border-dashed border-gray-300 rounded-2xl">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent mx-auto"></div>
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Generating Your Elevator Pitch
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full p-12 border-2 border-dashed border-blue-200 rounded-3xl bg-gradient-to-br from-blue-50 to-indigo-50"
+      >
+        <div className="text-center space-y-6">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="mx-auto w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center"
+          >
+            <Sparkles className="w-8 h-8 text-blue-600" />
+          </motion.div>
+          
+          <div className="space-y-3">
+            <h3 className="text-xl font-semibold text-blue-900">
+              Crafting Your Perfect Pitch
             </h3>
-            <p className="text-sm text-gray-600">
-              Analyzing your resume and crafting a personalized {targetSeconds}-second pitch...
+            <p className="text-blue-700 max-w-md mx-auto">
+              Analyzing your resume and generating a personalized {targetSeconds}-second elevator pitch...
             </p>
+            
+            <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
+              <motion.div
+                animate={{ opacity: [1, 0.5, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="flex gap-1"
+              >
+                <div className="w-1 h-1 bg-blue-400 rounded-full" />
+                <div className="w-1 h-1 bg-blue-400 rounded-full" />
+                <div className="w-1 h-1 bg-blue-400 rounded-full" />
+              </motion.div>
+              Processing your experience
+            </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
+  const actualSeconds = estimateReadingTime(pitch);
+  const wordCount = getWordCount(pitch);
+  const lengthDifference = Math.abs(actualSeconds - targetSeconds);
+  
+  const getLengthStatus = () => {
+    if (lengthDifference <= 5) return { status: "excellent", text: "Perfect length", color: "green" };
+    if (lengthDifference <= 10) return { status: "good", text: "Good length", color: "blue" };
+    return { status: "adjust", text: "Consider adjusting", color: "amber" };
+  };
+
+  const lengthStatus = getLengthStatus();
+
   return (
-    <div className="w-full space-y-4">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="w-full space-y-6"
+    >
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">
-          Your Generated Elevator Pitch
-        </h3>
-        <div className="flex items-center space-x-4">
-          {isAdjusting && (
-            <div className="flex items-center space-x-2 text-sm text-blue-600">
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
-              <span>Adjusting length...</span>
-            </div>
-          )}
-          <div className="text-sm text-gray-600">
-            <span className="font-medium">Target:</span> {targetSeconds}s
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+            <FileText className="w-5 h-5 text-white" />
           </div>
-          <div className="text-sm text-gray-600">
-            <span className="font-medium">Estimated:</span> ~{actualSeconds}s
+          <div>
+            <h3 className="text-xl font-semibold text-slate-800">
+              Your Generated Pitch
+            </h3>
+            <p className="text-sm text-slate-600">
+              Tailored to your experience and optimized for impact
+            </p>
           </div>
         </div>
+        
+        <AnimatePresence>
+          {isAdjusting && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-lg"
+            >
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Adjusting length...</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Pitch Content */}
-      <div className={`
-        relative p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl border border-gray-200 shadow-sm
-        ${isAdjusting ? 'opacity-60' : ''}
-      `}>
-        {isAdjusting && (
-          <div className="absolute inset-0 bg-white bg-opacity-50 rounded-2xl flex items-center justify-center">
-            <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent"></div>
+      <motion.div
+        layout
+        className={`
+          relative p-8 bg-gradient-to-br from-slate-50 to-blue-50 rounded-3xl border border-slate-200 shadow-sm
+          transition-opacity duration-300
+          ${isAdjusting ? 'opacity-60' : 'opacity-100'}
+        `}
+      >
+        <AnimatePresence>
+          {isAdjusting && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-white/70 backdrop-blur-sm rounded-3xl flex items-center justify-center z-10"
+            >
+              <div className="text-center space-y-2">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
+                <p className="text-sm text-slate-600">Updating your pitch...</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        <div className="prose prose-slate max-w-none">
+          <p className="text-slate-800 leading-relaxed text-lg whitespace-pre-wrap">
+            {pitch}
+          </p>
+        </div>
+      </motion.div>
+
+      {/* Stats and Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Stats */}
+        <div className="space-y-4">
+          <h4 className="font-medium text-slate-800">Pitch Statistics</h4>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center p-3 bg-white rounded-xl border border-slate-200">
+              <Clock className="w-5 h-5 text-slate-600 mx-auto mb-1" />
+              <div className="text-lg font-semibold text-slate-800">~{actualSeconds}s</div>
+              <div className="text-xs text-slate-600">Duration</div>
+            </div>
+            
+            <div className="text-center p-3 bg-white rounded-xl border border-slate-200">
+              <FileText className="w-5 h-5 text-slate-600 mx-auto mb-1" />
+              <div className="text-lg font-semibold text-slate-800">{wordCount}</div>
+              <div className="text-xs text-slate-600">Words</div>
+            </div>
+            
+            <div className="text-center p-3 bg-white rounded-xl border border-slate-200">
+              <div className={`w-5 h-5 mx-auto mb-1 flex items-center justify-center`}>
+                {lengthStatus.status === "excellent" ? (
+                  <Check className="w-5 h-5 text-green-600" />
+                ) : lengthStatus.status === "good" ? (
+                  <Check className="w-5 h-5 text-blue-600" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-amber-600" />
+                )}
+              </div>
+              <div className={`text-sm font-medium ${
+                lengthStatus.color === "green" ? "text-green-700" :
+                lengthStatus.color === "blue" ? "text-blue-700" :
+                "text-amber-700"
+              }`}>
+                {lengthStatus.text}
+              </div>
+              <div className="text-xs text-slate-600">vs {targetSeconds}s target</div>
+            </div>
           </div>
-        )}
-        
-        <p className="text-gray-900 leading-relaxed whitespace-pre-wrap">
-          {pitch}
-        </p>
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center justify-between pt-2">
-        <div className="text-xs text-gray-500">
-          💡 Tip: Practice this pitch with the recorder below to get personalized feedback!
         </div>
-        
-        {onPractice && (
-          <button
-            onClick={onPractice}
-            disabled={isAdjusting}
-            className={`
-              px-6 py-3 rounded-xl font-semibold transition-all duration-200 transform
-              ${isAdjusting 
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:from-emerald-600 hover:to-green-600 hover:scale-105 shadow-lg hover:shadow-xl'
-              }
-            `}
-          >
-            🎙️ Practice This Pitch
-          </button>
-        )}
+
+        {/* Actions */}
+        <div className="space-y-4">
+          <h4 className="font-medium text-slate-800">Next Steps</h4>
+          <div className="space-y-3">
+            {onPractice && (
+              <Button
+                onClick={onPractice}
+                disabled={isAdjusting}
+                className="w-full justify-start"
+                size="lg"
+              >
+                <Mic className="w-5 h-5 mr-3" />
+                Practice This Pitch
+              </Button>
+            )}
+            
+            <Button
+              onClick={copyToClipboard}
+              disabled={isAdjusting}
+              variant="outline"
+              className="w-full justify-start"
+              size="lg"
+            >
+              <Copy className="w-5 h-5 mr-3" />
+              Copy to Clipboard
+            </Button>
+          </div>
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-blue-800 mb-1">Pro Tip</p>
+                <p className="text-xs text-blue-700">
+                  Practice your pitch with the recorder below to get AI-powered feedback on your delivery, timing, and presentation style.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Quality indicators */}
-      <div className="flex items-center space-x-4 pt-2 border-t border-gray-200">
-        <div className="flex items-center space-x-2">
-          <div className={`
-            w-2 h-2 rounded-full
-            ${Math.abs(actualSeconds - targetSeconds) <= 5 
-              ? 'bg-green-500' 
-              : Math.abs(actualSeconds - targetSeconds) <= 10 
-                ? 'bg-yellow-500' 
-                : 'bg-red-500'
-            }
-          `}></div>
-          <span className="text-xs text-gray-600">
-            Length {Math.abs(actualSeconds - targetSeconds) <= 5 ? 'Perfect' : 'Good'}
+      {/* Quality Indicators */}
+      <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-slate-200">
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${
+            lengthStatus.color === "green" ? "bg-green-500" :
+            lengthStatus.color === "blue" ? "bg-blue-500" :
+            "bg-amber-500"
+          }`} />
+          <span className="text-sm text-slate-600">
+            {lengthStatus.text}
           </span>
         </div>
         
-        <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 rounded-full bg-green-500"></div>
-          <span className="text-xs text-gray-600">
-            Personalized
-          </span>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-purple-500" />
+          <span className="text-sm text-slate-600">AI-Generated</span>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-indigo-500" />
+          <span className="text-sm text-slate-600">Personalized</span>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -1,10 +1,15 @@
 "use client";
+
 import React, { useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Mic, Play, Brain, Target, FileText, Sparkles, TrendingUp, Clock, MessageCircle, CheckCircle } from "lucide-react";
+
 import Recorder from "@/components/Recorder";
 import ScoreCard from "@/components/ScoreCard";
 import ResumeUploader from "@/components/ResumeUploader";
 import PitchLengthSlider from "@/components/PitchLengthSlider";
 import GeneratedPitch from "@/components/GeneratedPitch";
+import { Button } from "@/components/ui/button";
 import { computeMetrics } from "@/lib/metrics";
 import { createRecorder, type RecordingResult } from "@/utils/recorder";
 import type { Metrics, TranscriptionResult } from "@/lib/types";
@@ -19,7 +24,7 @@ export default function Page() {
   // Resume-based pitch generation state
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [targetRole, setTargetRole] = useState("");
-  const [pitchLength, setPitchLength] = useState(50); // Default 50 seconds
+  const [pitchLength, setPitchLength] = useState(50);
   const [generatedPitch, setGeneratedPitch] = useState("");
   const [isGeneratingPitch, setIsGeneratingPitch] = useState(false);
   const [isAdjustingPitch, setIsAdjustingPitch] = useState(false);
@@ -28,16 +33,15 @@ export default function Page() {
   const recorderRef = useRef<HTMLDivElement>(null);
 
   async function uploadBlob(blob: Blob, durationSec: number, mimeType: string) {
-    // Fresh File for each request (prevents stale metadata/caching)
     const file = new File([blob], `rec-${Date.now()}.webm`, { type: mimeType || 'audio/webm' });
     const form = new FormData();
     form.append("file", file);
-    form.append("durationSec", String(Math.round(durationSec * 100) / 100)); // Round to 2 decimal places
+    form.append("durationSec", String(Math.round(durationSec * 100) / 100));
 
     const res = await fetch("/api/transcribe", {
       method: "POST",
       body: form,
-      cache: "no-store", // prevent request caching
+      cache: "no-store",
     });
     if (!res.ok) throw new Error(`transcribe failed: ${res.status}`);
     const data = await res.json();
@@ -52,30 +56,28 @@ export default function Page() {
       setCoach(null);
       setError(null);
 
-      // 1) Transcribe
-      const transcriptText = await uploadBlob(blob, durationSec, mimeType);
-      
-      if (!transcriptText || typeof transcriptText !== "string") {
-        console.error("No transcript received from API");
-        setError("No transcript was generated. Please try recording again.");
-        return;
+      const transcribeText = await uploadBlob(blob, durationSec, mimeType);
+      if (!transcribeText) {
+        throw new Error("No transcript received from server");
       }
 
-      setTranscript(transcriptText);
-      const m = computeMetrics(transcriptText, durationSec);
+      setTranscript(transcribeText);
+      const m = computeMetrics(transcribeText, durationSec);
       setMetrics(m);
 
-      // 2) Coach
-      const cRes = await fetch("/api/coach", {
+      const coachRes = await fetch("/api/coach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript: transcriptText, metrics: m }),
+        body: JSON.stringify({ transcript: transcribeText, metrics: m }),
       });
-      const cJson = await cRes.json();
-      setCoach(cJson);
+      
+      if (coachRes.ok) {
+        const coachData = await coachRes.json();
+        setCoach(coachData);
+      }
     } catch (err) {
-      console.error("Error processing recording:", err);
-      setError("Something went wrong while processing your recording. Please try again.");
+      console.error("Recording processing error:", err);
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -88,15 +90,14 @@ export default function Page() {
       setIsGeneratingPitch(true);
       setError(null);
 
-      // 1) Analyze resume
-      const analyzeForm = new FormData();
-      analyzeForm.append("file", resumeFile);
-      
+      const formData = new FormData();
+      formData.append("file", resumeFile);
+
       const analyzeRes = await fetch("/api/resume-analyze", {
         method: "POST",
-        body: analyzeForm,
+        body: formData,
       });
-      
+
       if (!analyzeRes.ok) {
         const analyzeError = await analyzeRes.json();
         throw new Error(analyzeError.error || "Failed to analyze resume");
@@ -104,8 +105,7 @@ export default function Page() {
 
       const analyzeData = await analyzeRes.json();
 
-      // 2) Generate pitch
-      const generateRes = await fetch("/api/generate-pitch", {
+      const pitchRes = await fetch("/api/generate-pitch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -115,18 +115,17 @@ export default function Page() {
         }),
       });
 
-      if (!generateRes.ok) {
-        const generateError = await generateRes.json();
-        throw new Error(generateError.error || "Failed to generate pitch");
+      if (!pitchRes.ok) {
+        const pitchError = await pitchRes.json();
+        throw new Error(pitchError.error || "Failed to generate pitch");
       }
 
-      const pitchData = await generateRes.json();
+      const pitchData = await pitchRes.json();
       setGeneratedPitch(pitchData.pitch);
       setOriginalPitchLength(pitchLength);
-
     } catch (err) {
-      console.error("Error generating pitch:", err);
-      setError(err instanceof Error ? err.message : "Failed to generate pitch. Please try again.");
+      console.error("Pitch generation error:", err);
+      setError(err instanceof Error ? err.message : "Failed to generate pitch");
     } finally {
       setIsGeneratingPitch(false);
     }
@@ -137,7 +136,8 @@ export default function Page() {
 
     try {
       setIsAdjustingPitch(true);
-      
+      setError(null);
+
       const adjustRes = await fetch("/api/adjust-pitch-length", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -155,207 +155,373 @@ export default function Page() {
 
       const adjustData = await adjustRes.json();
       setGeneratedPitch(adjustData.pitch);
-      setOriginalPitchLength(newLength);
-
     } catch (err) {
-      console.error("Error adjusting pitch length:", err);
-      setError("Failed to adjust pitch length. Please try again.");
+      console.error("Pitch adjustment error:", err);
+      setError(err instanceof Error ? err.message : "Failed to adjust pitch length");
     } finally {
       setIsAdjustingPitch(false);
     }
   }
 
   function handlePracticeGenerated() {
-    recorderRef.current?.scrollIntoView({ behavior: 'smooth' });
+    recorderRef.current?.scrollIntoView({ behavior: "smooth" });
   }
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+    },
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <main className="max-w-4xl mx-auto p-6 space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-4 py-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            🎤 Elevator Pitch Coach
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Generate a personalized pitch from your resume or practice an existing one
-          </p>
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <motion.header
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="relative overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50/30 border-b border-slate-200/60"
+      >
+        <div className="max-w-6xl mx-auto px-6 py-20 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-6 tracking-tight">
+              Elevator Pitch Coach
+            </h1>
+            <p className="text-xl md:text-2xl text-slate-600 max-w-3xl mx-auto leading-relaxed mb-8">
+              Practice and perfect your elevator pitch with AI-powered feedback
+            </p>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="flex flex-wrap justify-center gap-6 text-sm text-slate-500"
+            >
+              <div className="flex items-center gap-2">
+                <Brain className="w-4 h-4 text-blue-500" />
+                AI-Powered Analysis
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-green-500" />
+                Real-time Feedback
+              </div>
+              <div className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-purple-500" />
+                Personalized Coaching
+              </div>
+            </motion.div>
+          </motion.div>
         </div>
+      </motion.header>
 
-        {/* Resume-Based Pitch Generation Section */}
-        <section className="bg-white/70 backdrop-blur-sm border border-white/20 rounded-3xl shadow-xl overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-6 text-white">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold">📄 Generate from Resume</h2>
-              <p className="text-blue-100">
-                Don't have a pitch yet? Upload your resume and we'll create one for you!
-              </p>
+      {/* Main Content */}
+      <motion.main
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="max-w-6xl mx-auto px-6 py-12 space-y-16"
+      >
+        {/* Resume-Based Pitch Generation */}
+        <motion.section 
+          variants={itemVariants}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="glass rounded-3xl overflow-hidden shadow-xl border border-white/20"
+        >
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-8 text-white">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <FileText className="w-8 h-8" />
+              <h2 className="text-3xl font-bold">Generate Your Pitch</h2>
             </div>
+            <p className="text-blue-100 text-center max-w-2xl mx-auto">
+              Upload your resume and let AI create a personalized elevator pitch tailored to your experience
+            </p>
           </div>
-
+          
           <div className="p-8 space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <ResumeUploader 
-                  onFileUploaded={setResumeFile} 
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <ResumeUploader
+                  onFileUploaded={setResumeFile}
                   isProcessing={isGeneratingPitch}
                 />
-                
-                <div className="space-y-3">
-                  <label className="text-sm font-semibold text-gray-800">
-                    Target Role/Industry (optional)
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 }}
+                className="space-y-6"
+              >
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-3">
+                    Target Role or Industry (Optional)
                   </label>
                   <input
                     type="text"
                     value={targetRole}
                     onChange={(e) => setTargetRole(e.target.value)}
                     placeholder="e.g., Software Engineer, Marketing Manager"
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     disabled={isGeneratingPitch}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 bg-white"
                   />
-                  <p className="text-sm text-gray-600">
-                    💡 Help us tailor your pitch to specific roles or industries
-                  </p>
                 </div>
-              </div>
-
-              <div className="space-y-6">
-                <PitchLengthSlider
-                  value={pitchLength}
-                  onChange={setPitchLength}
-                  disabled={isGeneratingPitch}
-                />
                 
-                <button
-                  onClick={handleGeneratePitch}
-                  disabled={!resumeFile || isGeneratingPitch}
-                  className={`
-                    w-full py-4 px-6 rounded-2xl font-semibold text-lg transition-all duration-200 transform
-                    ${resumeFile && !isGeneratingPitch
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 hover:scale-105 shadow-lg hover:shadow-xl'
-                      : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    }
-                  `}
-                >
-                  {isGeneratingPitch ? (
-                    <div className="flex items-center justify-center space-x-3">
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                      <span>Generating Your Perfect Pitch...</span>
-                    </div>
-                  ) : (
-                    '✨ Generate Pitch'
-                  )}
-                </button>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-4">
+                    Pitch Length
+                  </label>
+                  <PitchLengthSlider
+                    value={pitchLength}
+                    onChange={setPitchLength}
+                    onChangeComplete={() => {}}
+                    disabled={isGeneratingPitch}
+                    isUpdating={false}
+                  />
+                </div>
+              </motion.div>
             </div>
 
-            {generatedPitch && (
-              <div className="space-y-6 pt-8 border-t border-gray-200">
-                <div className="text-center">
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">Adjust Pitch Length</h3>
-                  <p className="text-gray-600">Drag to change length, auto-updates when you release</p>
-                </div>
-                
-                <PitchLengthSlider
-                  value={pitchLength}
-                  onChange={setPitchLength}
-                  onChangeComplete={handlePitchLengthChange}
-                  disabled={isGeneratingPitch}
-                  isUpdating={isAdjustingPitch}
-                />
-                
-                <GeneratedPitch
-                  pitch={generatedPitch}
-                  targetSeconds={pitchLength}
-                  isGenerating={isGeneratingPitch}
-                  isAdjusting={isAdjustingPitch}
-                  onPractice={handlePracticeGenerated}
-                />
-              </div>
-            )}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="flex justify-center"
+            >
+              <Button
+                onClick={handleGeneratePitch}
+                disabled={!resumeFile || isGeneratingPitch}
+                loading={isGeneratingPitch}
+                size="lg"
+                className="px-8"
+              >
+                <Sparkles className="w-5 h-5 mr-2" />
+                {isGeneratingPitch ? "Generating Your Pitch..." : "Generate Pitch"}
+              </Button>
+            </motion.div>
+
+            <AnimatePresence>
+              {generatedPitch && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="space-y-6 pt-8 border-t border-slate-200"
+                >
+                  <div className="text-center">
+                    <h3 className="text-xl font-semibold text-slate-800 mb-2">Adjust Pitch Length</h3>
+                    <p className="text-slate-600">Drag to change length, auto-updates when you release</p>
+                  </div>
+                  
+                  <PitchLengthSlider
+                    value={pitchLength}
+                    onChange={setPitchLength}
+                    onChangeComplete={handlePitchLengthChange}
+                    disabled={isGeneratingPitch}
+                    isUpdating={isAdjustingPitch}
+                  />
+                  
+                  <GeneratedPitch
+                    pitch={generatedPitch}
+                    targetSeconds={pitchLength}
+                    isGenerating={isGeneratingPitch}
+                    isAdjusting={isAdjustingPitch}
+                    onPractice={handlePracticeGenerated}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        </section>
+        </motion.section>
 
         {/* Practice Section */}
-        <section ref={recorderRef} className="bg-white/70 backdrop-blur-sm border border-white/20 rounded-3xl shadow-xl overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-500 to-green-500 p-6 text-white">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold">🎙️ Practice & Get Feedback</h2>
-              <p className="text-emerald-100">
-                Record yourself practicing your pitch to get personalized coaching
-              </p>
+        <motion.section 
+          ref={recorderRef} 
+          variants={itemVariants}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="glass rounded-3xl overflow-hidden shadow-xl border border-white/20"
+        >
+          <div className="bg-gradient-to-r from-emerald-500 to-green-600 p-8 text-white">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Mic className="w-8 h-8" />
+              <h2 className="text-3xl font-bold">Practice & Get Feedback</h2>
             </div>
+            <p className="text-emerald-100 text-center max-w-2xl mx-auto">
+              Record yourself practicing your pitch to get personalized coaching and performance insights
+            </p>
           </div>
           
-          <div className="p-8 space-y-6">
+          <div className="p-8 space-y-8">
             <Recorder onRecorded={handleRecorded} maxSeconds={30} />
-            {loading && (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent mr-3"></div>
-                <span className="text-lg text-gray-700">Analyzing your pitch...</span>
-              </div>
-            )}
+            
+            <AnimatePresence>
+              {loading && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="flex flex-col items-center justify-center py-12 space-y-4"
+                >
+                  <div className="relative">
+                    <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                  </div>
+                  <div className="text-center">
+                    <h3 className="text-lg font-medium text-slate-800 mb-1">Analyzing your pitch...</h3>
+                    <p className="text-slate-600">This will take just a moment</p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        </section>
+        </motion.section>
 
         {/* Error Display */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 shadow-lg">
-            <h3 className="font-semibold text-red-800 mb-2">⚠️ Error</h3>
-            <p className="text-red-700">{error}</p>
-          </div>
-        )}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              className="bg-red-50 border border-red-200 rounded-2xl p-6 shadow-lg"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-1">
+                  <div className="w-2 h-2 bg-red-500 rounded-full" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-red-800 mb-1">Something went wrong</h3>
+                  <p className="text-red-700">{error}</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Results Section */}
-        {(metrics || transcript || coach) && (
-          <section className="bg-white/70 backdrop-blur-sm border border-white/20 rounded-3xl shadow-xl overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-6 text-white">
-              <div className="text-center space-y-2">
-                <h2 className="text-2xl font-bold">📊 Your Results</h2>
-                <p className="text-purple-100">
-                  Here's your performance analysis and coaching feedback
+        <AnimatePresence>
+          {(metrics || transcript || coach) && (
+            <motion.section
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="glass rounded-3xl overflow-hidden shadow-xl border border-white/20"
+            >
+              <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-8 text-white">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <TrendingUp className="w-8 h-8" />
+                  <h2 className="text-3xl font-bold">Your Results</h2>
+                </div>
+                <p className="text-purple-100 text-center max-w-2xl mx-auto">
+                  Here's your comprehensive performance analysis and personalized coaching feedback
                 </p>
               </div>
-            </div>
 
-            <div className="p-8 space-y-8">
-              {metrics && <ScoreCard m={metrics} />}
+              <div className="p-8 space-y-8">
+                {metrics && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                  >
+                    <ScoreCard m={metrics} />
+                  </motion.div>
+                )}
 
-              {transcript && (
-                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border border-gray-200">
-                  <h3 className="font-semibold text-gray-800 mb-3">📝 Transcript</h3>
-                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{transcript}</p>
-                </div>
-              )}
+                {transcript && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl p-6 border border-slate-200"
+                  >
+                    <div className="flex items-center gap-2 mb-4">
+                      <MessageCircle className="w-5 h-5 text-slate-600" />
+                      <h3 className="font-semibold text-slate-800">Transcript</h3>
+                    </div>
+                    <p className="text-slate-700 leading-relaxed">{transcript}</p>
+                  </motion.div>
+                )}
 
-              {coach && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-green-50 border border-green-200 rounded-2xl p-6">
-                    <h3 className="font-semibold text-green-800 mb-3">💪 Strengths</h3>
-                    <ul className="list-disc pl-5 text-green-700 space-y-1">
-                      {coach.strengths?.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                    </ul>
-                  </div>
-                  <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
-                    <h3 className="font-semibold text-blue-800 mb-3">🎯 Improvements</h3>
-                    <ul className="list-disc pl-5 text-blue-700 space-y-1">
-                      {coach.improvements?.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                    </ul>
-                  </div>
-                  <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-6 md:col-span-2">
-                    <h3 className="font-semibold text-indigo-800 mb-3">✨ Polished Script</h3>
-                    <p className="text-indigo-700 whitespace-pre-wrap leading-relaxed">{coach.polishedScript}</p>
-                  </div>
-                  <div className="bg-purple-50 border border-purple-200 rounded-2xl p-6 md:col-span-2">
-                    <h3 className="font-semibold text-purple-800 mb-3">💼 LinkedIn "About"</h3>
-                    <p className="text-purple-700 whitespace-pre-wrap leading-relaxed">{coach.aboutRewrite}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-      </main>
+                {coach && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+                  >
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <h3 className="font-semibold text-green-800">Strengths</h3>
+                      </div>
+                      <ul className="space-y-2 text-green-700">
+                        {coach.strengths?.map((s: string, i: number) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2 flex-shrink-0" />
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Target className="w-5 h-5 text-blue-600" />
+                        <h3 className="font-semibold text-blue-800">Areas for Improvement</h3>
+                      </div>
+                      <ul className="space-y-2 text-blue-700">
+                        {coach.improvements?.map((s: string, i: number) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl p-6 lg:col-span-2">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Sparkles className="w-5 h-5 text-indigo-600" />
+                        <h3 className="font-semibold text-indigo-800">Polished Script</h3>
+                      </div>
+                      <p className="text-indigo-700 leading-relaxed">{coach.polishedScript}</p>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-2xl p-6 lg:col-span-2">
+                      <div className="flex items-center gap-2 mb-4">
+                        <FileText className="w-5 h-5 text-purple-600" />
+                        <h3 className="font-semibold text-purple-800">LinkedIn About Section</h3>
+                      </div>
+                      <p className="text-purple-700 leading-relaxed">{coach.aboutRewrite}</p>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+      </motion.main>
     </div>
   );
 }
