@@ -61,6 +61,7 @@ export function createRecorder(): Recorder {
           }
         });
         
+
         // Start recording with timeslice and track time
         startTime = performance.now();
         mediaRecorder.start(100); // Use 100ms timeslice to force more frequent data chunks
