@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import Recorder from "@/components/Recorder";
 import ScoreCard from "@/components/ScoreCard";
 import { computeMetrics } from "@/lib/metrics";
+import { createRecorder, type RecordingResult } from "@/utils/recorder";
 import type { Metrics, TranscriptionResult } from "@/lib/types";
 
 export default function Page() {
@@ -12,12 +13,12 @@ export default function Page() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function uploadBlob(blob: Blob, durationSec: number) {
+  async function uploadBlob(blob: Blob, durationSec: number, mimeType: string) {
     // Fresh File for each request (prevents stale metadata/caching)
-    const file = new File([blob], `rec-${Date.now()}.webm`, { type: "audio/webm" });
+    const file = new File([blob], `rec-${Date.now()}.webm`, { type: mimeType || 'audio/webm' });
     const form = new FormData();
     form.append("file", file);
-    form.append("durationSec", String(durationSec));
+    form.append("durationSec", String(Math.round(durationSec * 100) / 100)); // Round to 2 decimal places
 
     const res = await fetch("/api/transcribe", {
       method: "POST",
@@ -29,7 +30,7 @@ export default function Page() {
     return data.text as string;
   }
 
-  async function handleRecorded(blob: Blob, durationSec: number) {
+  async function handleRecorded({ blob, durationSec, mimeType }: RecordingResult) {
     try {
       setLoading(true);
       setTranscript("");
@@ -38,7 +39,7 @@ export default function Page() {
       setError(null);
 
       // 1) Transcribe
-      const transcriptText = await uploadBlob(blob, durationSec);
+      const transcriptText = await uploadBlob(blob, durationSec, mimeType);
       
       if (!transcriptText || typeof transcriptText !== "string") {
         console.error("No transcript received from API");
