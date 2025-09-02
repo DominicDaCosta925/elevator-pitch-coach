@@ -323,6 +323,19 @@ export default function Page() {
     return null;
   };
 
+  const ScoreCardSkeleton = () => (
+    <Card className="w-full rounded-2xl p-6 md:p-7 shadow-[0_6px_24px_rgba(0,0,0,0.08)] bg-card">
+      <CardHeader>
+        <Skeleton className="h-6 w-32" />
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-4 w-1/2" />
+      </CardContent>
+    </Card>
+  );
+
   const renderPolishedScript = (script: string) => {
     const cta = extractCTA(script);
     if (!cta) return script;
@@ -338,12 +351,12 @@ export default function Page() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-background">
+      <main className="min-h-[100svh] bg-background">
         {loading && <Progress value={undefined} className="fixed top-0 left-0 right-0 z-50 h-1" />}
         
         {/* Header */}
         <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40">
-          <div className="max-w-[1100px] mx-auto px-6 md:px-8 h-16 flex items-center justify-between">
+          <div className="mx-auto w-full max-w-screen-2xl px-4 md:px-8 h-16 flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-semibold tracking-[-0.01em] font-heading">Elevator Pitch Coach</h1>
               <p className="text-sm text-muted-foreground">Fast, warm, surgical coaching</p>
@@ -352,25 +365,25 @@ export default function Page() {
           </div>
         </header>
 
-        <div className="max-w-[1100px] mx-auto px-6 md:px-8 my-8 md:my-10">
-          <div className="grid lg:grid-cols-3 gap-8 md:gap-10">
-            {/* Main Content */}
-            <div className="lg:col-span-2 flex flex-col gap-8 md:gap-10">
+        <div className="mx-auto w-full max-w-screen-2xl px-4 md:px-8 py-8 md:py-12">
+          <div className="grid gap-8 lg:gap-10 lg:grid-cols-3">
+            {/* Left Column - Single Card */}
+            <section className="col-span-1 w-full flex flex-col gap-8 lg:gap-10">
               {/* Resume Upload Section */}
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, ease: "easeOut" }}
               >
-                <Card className="rounded-2xl p-6 md:p-7 shadow-[0_6px_24px_rgba(0,0,0,0.08)]">
+                <Card className="w-full rounded-2xl p-6 md:p-7 shadow-[0_6px_24px_rgba(0,0,0,0.08)] bg-card">
                   <CardHeader>
                     <CardTitle className="font-heading text-2xl font-medium">Upload Your Resume</CardTitle>
-                    <CardDescription>
+                    <CardDescription className="max-w-prose">
                       Drag & drop or click to browse (PDF, DOCX, TXT · up to 10MB)
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <ResumeUploader onFileSelect={setResumeFile} selectedFile={resumeFile} />
+                    <ResumeUploader onFileUploaded={setResumeFile} />
                     {resumeFile && (
                       <p className="text-sm text-muted-foreground">Selected: {resumeFile.name} · {(resumeFile.size / 1024).toFixed(0)} KB</p>
                     )}
@@ -378,18 +391,46 @@ export default function Page() {
                 </Card>
               </motion.div>
 
-              {/* Pitch Settings */}
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: "easeOut", delay: 0.07 }}
-              >
-                <Card className="rounded-2xl p-6 md:p-7 shadow-[0_6px_24px_rgba(0,0,0,0.08)]">
-                  <CardHeader>
-                    <CardTitle className="font-heading text-2xl font-semibold pt-1">Pitch Settings</CardTitle>
-                    <CardDescription className="text-sm text-muted-foreground max-w-prose">
-                      Choose your target role, ideal length, and coaching depth.
-                    </CardDescription>
+              {/* Scorecard */}
+              <div className="sticky top-24">
+                {loading ? (
+                  <ScoreCardSkeleton />
+                ) : coach ? (
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.35, delay: 0.2 }}
+                  >
+                    <EnhancedScoreCard metrics={metrics || { durationSec: 0, wordsPerMinute: 0, fillerCount: 0, readability: 0 }} coaching={coach} />
+                  </motion.div>
+                ) : metrics ? (
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.35, delay: 0.1 }}
+                  >
+                    <ScoreCard m={metrics} />
+                  </motion.div>
+                ) : null}
+              </div>
+
+            </section>
+
+            {/* Right Column - Two Cards */}
+            <section className="col-span-2 w-full">
+              <div className="flex flex-col gap-8">
+                {/* Pitch Settings */}
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, ease: "easeOut", delay: 0.07 }}
+                >
+                  <Card className="w-full rounded-2xl p-6 md:p-7 shadow-[0_6px_24px_rgba(0,0,0,0.08)] bg-card">
+                    <CardHeader>
+                      <CardTitle className="font-heading text-2xl font-semibold pt-1">Pitch Settings</CardTitle>
+                      <CardDescription className="text-sm text-muted-foreground max-w-prose">
+                        Choose your target role, ideal length, and coaching depth.
+                      </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -458,18 +499,18 @@ export default function Page() {
                 </Card>
               </motion.div>
 
-              {/* Practice & Results */}
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: "easeOut", delay: 0.08 }}
-              >
-                <Card className="rounded-2xl p-6 md:p-7 shadow-[0_6px_24px_rgba(0,0,0,0.08)]">
-                  <CardHeader>
-                    <CardTitle className="font-heading text-2xl font-semibold pt-1">Practice & Results</CardTitle>
-                    <CardDescription className="text-sm text-muted-foreground max-w-prose">
-                      Practice your elevator pitch and get instant AI feedback
-                    </CardDescription>
+                {/* Practice & Results */}
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, ease: "easeOut", delay: 0.08 }}
+                >
+                  <Card className="w-full rounded-2xl p-6 md:p-7 shadow-[0_6px_24px_rgba(0,0,0,0.08)] bg-card">
+                    <CardHeader>
+                      <CardTitle className="font-heading text-2xl font-semibold pt-1">Practice & Results</CardTitle>
+                      <CardDescription className="text-sm text-muted-foreground max-w-prose">
+                        Practice your elevator pitch and get instant AI feedback
+                      </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     {/* Recording Controls */}
@@ -484,27 +525,27 @@ export default function Page() {
                     )}
                   </CardContent>
                 </Card>
-              </motion.div>
+                </motion.div>
 
-              {/* Results Section */}
-              {(transcript || loading) && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35, delay: 0.1 }}
-                  className="space-y-6"
-                >
-                  {/* Transcript */}
-                  {transcript && (
-                    <Card className="premium-card">
-                      <CardHeader>
-                        <CardTitle className="font-heading">Your Transcript</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm selectable leading-relaxed">{transcript}</p>
-                      </CardContent>
-                    </Card>
-                  )}
+                {/* Results Section */}
+                {(transcript || loading) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35, delay: 0.1 }}
+                    className="space-y-6"
+                  >
+                    {/* Transcript */}
+                    {transcript && (
+                      <Card className="w-full rounded-2xl p-6 md:p-7 shadow-[0_6px_24px_rgba(0,0,0,0.08)] bg-card">
+                        <CardHeader>
+                          <CardTitle className="font-heading">Your Transcript</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm selectable leading-relaxed">{transcript}</p>
+                        </CardContent>
+                      </Card>
+                    )}
 
                   {/* Polished Script */}
                   {generatedPitch && (
@@ -530,33 +571,33 @@ export default function Page() {
                     </div>
                   )}
 
-                  {coach?.polishedScript && (
-                    <Card className="rounded-2xl p-6 md:p-7 shadow-[0_6px_24px_rgba(0,0,0,0.08)]">
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="font-heading text-2xl font-medium">Polished Script</CardTitle>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={copyPolishedScript}
-                            className="gap-2"
-                          >
-                            {copiedScript ? (
-                              <Check className="h-4 w-4" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                            {copiedScript ? "Copied!" : "Copy"}
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-base leading-relaxed select-text whitespace-pre-line">
-                          {renderPolishedScript(coach.polishedScript)}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                    {coach?.polishedScript && (
+                      <Card className="w-full rounded-2xl p-6 md:p-7 shadow-[0_6px_24px_rgba(0,0,0,0.08)] bg-card">
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="font-heading text-2xl font-medium">Polished Script</CardTitle>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={copyPolishedScript}
+                              className="gap-2"
+                            >
+                              {copiedScript ? (
+                                <Check className="h-4 w-4" />
+                              ) : (
+                                <Copy className="h-4 w-4" />
+                              )}
+                              {copiedScript ? "Copied!" : "Copy"}
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-base leading-relaxed select-text whitespace-pre-line">
+                            {renderPolishedScript(coach.polishedScript)}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
 
                   {/* Direct Quotes */}
                   {coach?.directQuotes && coach.directQuotes.length > 0 && (
@@ -618,38 +659,14 @@ export default function Page() {
                         </AccordionItem>
                       )}
                     </Accordion>
-                  )}
-                </motion.div>
-              )}
-            </div>
-
-            {/* Sidebar - Scorecard */}
-            <div className="lg:col-span-1">
-              <div className="sticky top-24 space-y-6">
-                {loading ? (
-                  <ScoreCardSkeleton />
-                ) : coach ? (
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.35, delay: 0.2 }}
-                  >
-                    <EnhancedScoreCard coach={coach} />
+                    )}
                   </motion.div>
-                ) : metrics ? (
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.35, delay: 0.1 }}
-                  >
-                    <ScoreCard metrics={metrics} />
-                  </motion.div>
-                ) : null}
+                )}
               </div>
-            </div>
+            </section>
           </div>
         </div>
-      </div>
+      </main>
     </TooltipProvider>
   );
 }
