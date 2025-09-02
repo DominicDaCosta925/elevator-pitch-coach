@@ -37,17 +37,33 @@ const BaseCoachingSchema = z.object({
 
 // Brief mode schema (compact)
 export const BriefCoachingSchema = BaseCoachingSchema.extend({
-  directQuotes: z.array(z.string()).min(1).max(2),
+  directQuotes: z.array(z.string()).min(1).max(2).refine(
+    (quotes) => quotes.length <= 2,
+    { message: "Brief mode: directQuotes must be ≤2" }
+  ),
   lineEdits: z.array(z.object({
     quote: z.string().min(5),
     upgrade: z.string().min(5),
     why: z.string().min(10),
-  })).min(1).max(2),
-  coachingTips: z.array(z.string().min(10)).min(2).max(3),
+  })).min(1).max(2).refine(
+    (edits) => edits.length <= 2,
+    { message: "Brief mode: lineEdits must be ≤2" }
+  ),
+  coachingTips: z.array(z.string().min(10)).min(2).max(3).refine(
+    (tips) => tips.length >= 2 && tips.length <= 3,
+    { message: "Brief mode: coachingTips must be 2-3" }
+  ),
+  polishedScript: z.string().min(50).refine(
+    (script) => /(\?|opportunities?|discuss|connect|conversation|chat|call|time|week|available|open to)\.?\s*$/i.test(script),
+    { message: "polishedScript must end with a CTA" }
+  ),
   // Brief mode omits aboutRewrite and nextSteps
+}).omit({ 
+  aboutRewrite: true, 
+  nextSteps: true 
 });
 
-// Deep-dive mode schema (comprehensive)
+// Deep-dive mode schema (comprehensive)  
 export const DeepCoachingSchema = BaseCoachingSchema.extend({
   directQuotes: z.array(z.string()).min(3),
   lineEdits: z.array(z.object({
@@ -55,7 +71,14 @@ export const DeepCoachingSchema = BaseCoachingSchema.extend({
     upgrade: z.string().min(5),
     why: z.string().min(10),
   })).min(3),
-  coachingTips: z.array(z.string().min(10)).min(3).max(5),
+  coachingTips: z.array(z.string().min(10)).min(3).max(5).refine(
+    (tips) => tips.length >= 3 && tips.length <= 5,
+    { message: "Deep mode requires 3-5 transcript-specific coaching tips" }
+  ),
+  polishedScript: z.string().min(50).refine(
+    (script) => /(\?|opportunities?|discuss|connect|conversation|chat|call|time|week|available|open to)\.?\s*$/i.test(script),
+    { message: "polishedScript must end with a CTA" }
+  ),
   aboutRewrite: z.string().min(50),
   nextSteps: z.array(z.string().min(10)).min(3).max(5),
 });

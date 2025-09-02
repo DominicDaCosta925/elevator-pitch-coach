@@ -90,56 +90,132 @@ function extractFirstName(transcript: string): string {
 
 function generateContextualTips(transcript: string, metrics: Metrics, depth: "brief" | "deep"): string[] {
   const tips: string[] = [];
-  const targetCount = depth === "brief" ? 2 : 3;
+  const targetCount = depth === "brief" ? 3 : 4; // Brief needs 2-3, aim for 3
   
-  // Filler-specific tip if high count
+  // Priority 1: Filler-specific tip with pause timing if high count (≥6)
   if (metrics.fillerCount >= 6) {
     const fillers = transcript.match(/\b(um|uh|like|you know|so|actually)\b/gi);
+    const opener = transcript.split(/[.!?]/)[0]?.trim();
     if (fillers && fillers.length > 0) {
-      tips.push(`You said "${fillers.slice(0, 2).join('...')}" ${metrics.fillerCount}× in ${metrics.durationSec}s — replace with 1-beat pauses and start with "I am [name], a [role] who [value]"`);
+      const shortOpener = opener ? `"${opener.split(/\s+/).slice(0, 6).join(' ')}"` : `"I am [name], a [role] who delivers [value]"`;
+      tips.push(`You said "${fillers.slice(0, 2).join('...')}" ${metrics.fillerCount}× in ${metrics.durationSec}s — replace with 2-beat pauses and practice: ${shortOpener}`);
     } else {
-      tips.push(`${metrics.fillerCount} filler words in ${metrics.durationSec}s slows your impact — practice 1-beat pauses and memorize your opening line`);
+      tips.push(`${metrics.fillerCount} filler words in ${metrics.durationSec}s — practice 2-beat pauses between key phrases and memorize your opening line`);
     }
   }
   
-  // Metric-specific tip if numbers present
-  const metricMatch = transcript.match(/(\d+%|\$\d+|\d+[KMB]|increased|boosted|grew|improved).*?(\d+%)/i);
-  if (metricMatch) {
-    const metric = metricMatch[2] || metricMatch[1];
-    tips.push(`You mentioned "${metric}" — strengthen this by adding business context: "${metric} sales lift = $X incremental revenue" or "${metric} efficiency gain = Y hours saved daily"`);
-  }
-  
-  // Pace-specific tip
-  if (metrics.wordsPerMinute > 170) {
-    const fastPhrase = transcript.split(/[.!?]/).find(s => s.trim().length > 20)?.trim().slice(0, 40);
-    if (fastPhrase) {
-      tips.push(`Your pace (${metrics.wordsPerMinute} wpm) rushes past impact moments — after saying "${fastPhrase}..." pause 2 beats to let it land`);
-    } else {
-      tips.push(`${metrics.wordsPerMinute} wpm is too fast for executive presence — slow to 140-160 and pause after key achievements`);
+  // Priority 2: %→$ conversion tip if transcript has % or $
+  const percentMatch = transcript.match(/(\d+%)/i);
+  const dollarMatch = transcript.match(/(\$\d+[KMB]?)/i);
+  if (percentMatch || dollarMatch) {
+    const metric = percentMatch?.[1] || dollarMatch?.[1];
+    const contextPhrase = transcript.match(new RegExp(`[^.]*${metric?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^.]*`, 'i'))?.[0]?.trim();
+    if (contextPhrase) {
+      tips.push(`You said "${contextPhrase}" — convert to business impact: "${metric} = $X revenue" or "${metric} = Y cost savings/efficiency hours"`);
     }
-  } else if (metrics.wordsPerMinute < 120) {
-    tips.push(`${metrics.wordsPerMinute} wpm feels hesitant — practice until you can deliver key phrases with confident energy`);
   }
   
-  // Generic qualification tip if too few specific issues
+  // Priority 3: Verb strengthening if "I like/helped" detected
+  const weakVerbMatch = transcript.match(/\b(I\s+(?:like|helped|worked|assisted|contributed|was\s+involved))\b/i);
+  if (weakVerbMatch) {
+    const phrase = weakVerbMatch[1];
+    const replacement = phrase.toLowerCase().includes('like') ? 'I specialize in' : 
+                       phrase.toLowerCase().includes('helped') ? 'I drove' :
+                       phrase.toLowerCase().includes('worked') ? 'I led' : 'I delivered';
+    tips.push(`Replace "${phrase}" with "${replacement}" — own your active role in creating the results`);
+  }
+  
+  // Fill remaining slots with transcript-specific observations
   if (tips.length < targetCount) {
-    const weakWord = transcript.match(/\b(helped|worked|was involved|contributed|assisted)\b/i)?.[0];
-    if (weakWord) {
-      tips.push(`Replace "${weakWord}" with stronger verbs: drove, led, delivered, created, transformed — own your role in the results`);
+    // Pace-specific tip
+    if (metrics.wordsPerMinute > 170) {
+      const fastPhrase = transcript.split(/[.!?]/).find(s => s.trim().length > 20)?.trim().slice(0, 40);
+      if (fastPhrase) {
+        tips.push(`Your pace (${metrics.wordsPerMinute} wpm) rushes past impact — after saying "${fastPhrase}..." pause 2 beats to let it land`);
+      }
+    } else if (metrics.wordsPerMinute < 120) {
+      tips.push(`${metrics.wordsPerMinute} wpm feels hesitant — practice delivering your strongest phrase with confident energy`);
     }
   }
   
-  // Opening strength tip if still needed
   if (tips.length < targetCount) {
+    // Opening strength tip
     const opener = transcript.split(/[.!?]/)[0]?.trim();
     if (opener && opener.length > 10) {
-      tips.push(`Your opener "${opener.slice(0, 30)}..." — practice until this flows in under 3 seconds with executive confidence`);
-    } else {
-      tips.push(`Strengthen your opening hook — lead with your role and biggest result in the first 5 seconds`);
+      tips.push(`Your opener "${opener.slice(0, 30)}..." — practice until this flows confidently in under 3 seconds`);
     }
   }
   
-  return tips.slice(0, targetCount);
+  // Ensure we have at least 2 tips for brief mode
+  if (tips.length < 2) {
+    tips.push(`Strengthen your value proposition — lead with the transformation you create, not just the work you do`);
+  }
+  
+  return tips.slice(0, depth === "brief" ? 3 : targetCount);
+}
+
+function synthesizeDeepTips(currentTips: string[], transcript: string, metrics: Metrics, directQuotes: string[]): string[] {
+  const tips = [...currentTips];
+  const targetMin = 3;
+  const targetMax = 5;
+  
+  if (tips.length >= targetMin) {
+    return tips.slice(0, targetMax); // Already sufficient
+  }
+  
+  console.log(`Deep mode tips insufficient: ${tips.length}/3 minimum, synthesizing additional tips`);
+  
+  // Pattern 1: % → $ conversion if metric present
+  const percentMatch = transcript.match(/(\d+%)/i);
+  const dollarMatch = transcript.match(/(\$\d+[KMB]?)/i);
+  if ((percentMatch || dollarMatch) && !tips.some(t => t.includes('$') || t.includes('%'))) {
+    const metric = percentMatch?.[1] || dollarMatch?.[1];
+    const metricContext = directQuotes.find(q => q.includes(metric)) || 
+                         transcript.match(new RegExp(`[^.]*${metric?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^.]*`, 'i'))?.[0]?.trim();
+    if (metricContext) {
+      tips.push(`You mentioned "${metricContext}" — quantify the business impact: "${metric} ≈ $X this quarter using your run-rate" or "${metric} = Y efficiency hours saved"`);
+    }
+  }
+  
+  // Pattern 2: Mechanism/Scope if system mentioned
+  const mechanismMatch = transcript.match(/\b(recommendation system|onboarding|activation|conversion|dashboard|algorithm|model|platform|automation|workflow)\b/i);
+  if (mechanismMatch && tips.length < targetMax && !tips.some(t => t.toLowerCase().includes(mechanismMatch[1].toLowerCase()))) {
+    const mechanism = mechanismMatch[1];
+    tips.push(`Your "${mechanism}" work — add scope details: "reduced steps N→M," "cut time-to-value by Y days," or "A/B tested with ~Z users" to show scale`);
+  }
+  
+  // Pattern 3: Verb strengthening if weak verbs present
+  const weakVerbMatch = transcript.match(/\b(I\s+(?:like|helped|worked|assisted|contributed|was\s+involved|participated))\b/i);
+  if (weakVerbMatch && tips.length < targetMax && !tips.some(t => t.includes(weakVerbMatch[1]))) {
+    const phrase = weakVerbMatch[1];
+    const strongVerb = phrase.toLowerCase().includes('like') ? 'I lead' : 
+                      phrase.toLowerCase().includes('helped') ? 'I drove' :
+                      phrase.toLowerCase().includes('worked') ? 'I built' : 'I delivered';
+    tips.push(`Replace "${phrase}" with "${strongVerb}" — take active ownership of your transformational role in the results`);
+  }
+  
+  // Pattern 4: Cadence/Pause for fast pace or complex sentences
+  if (tips.length < targetMax && (metrics.wordsPerMinute > 150 || transcript.includes(', which ') || transcript.includes(' and '))) {
+    const complexClause = transcript.match(/([^.]*(?:, which|, and|that)[^.]{15,})/i)?.[1]?.trim();
+    if (complexClause && complexClause.length > 30) {
+      const pausePoint = complexClause.substring(0, 40);
+      tips.push(`Your pace (${metrics.wordsPerMinute} wpm) rushes complex ideas — after "${pausePoint}..." pause 1 beat to let the impact register`);
+    } else if (metrics.wordsPerMinute > 150) {
+      tips.push(`${metrics.wordsPerMinute} wpm feels rushed for executive presence — practice slowing to 140-160 wpm and pause after your strongest achievement`);
+    }
+  }
+  
+  // Pattern 5: Opening strength if still needed
+  if (tips.length < targetMin) {
+    const opener = transcript.split(/[.!?]/)[0]?.trim();
+    if (opener && opener.length > 15) {
+      tips.push(`Your opener "${opener.slice(0, 35)}..." — practice delivering this hook with executive confidence in under 4 seconds`);
+    }
+  }
+  
+  const finalTips = tips.slice(0, targetMax);
+  console.log(`Deep tips synthesized: ${currentTips.length} → ${finalTips.length}`);
+  return finalTips;
 }
 
 const CTA_TEMPLATE_POOL = [
@@ -150,11 +226,20 @@ const CTA_TEMPLATE_POOL = [
   "I'm seeking {role} roles on teams solving complex business challenges with data — would you be open to a brief call in the next few days?"
 ];
 
+function normalizeCtaText(text: string): string {
+  return text.toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function ensureCtaEnding(script: string, targetRole?: string): string {
+  const scriptTrimmed = script.trim();
+  
   // Enhanced CTA detection patterns
   const hasCtaPattern = /(\?|opportunities?|discuss|connect|conversation|next steps?|interested|available|chat|call|time|week|available|open to)\.?\s*$/i;
   
-  if (hasCtaPattern.test(script.trim())) {
+  if (hasCtaPattern.test(scriptTrimmed)) {
     return script; // Already has strong CTA
   }
 
@@ -173,25 +258,163 @@ function ensureCtaEnding(script: string, targetRole?: string): string {
     .replace('{role}', role)
     .replace('{domain}', domain);
   
+  // Deduplicate by checking if script already contains this CTA
+  const normalizedScript = normalizeCtaText(scriptTrimmed);
+  const normalizedCta = normalizeCtaText(ctaText);
+  
+  if (normalizedScript.includes(normalizedCta)) {
+    console.log(`CTA already present, skipping append for role "${role}"`);
+    return script;
+  }
+  
   console.log(`CTA appended: template ${templateIndex + 1} for role "${role}"`);
-  return `${script.trim()} ${ctaText}`;
+  return `${scriptTrimmed} ${ctaText}`;
 }
 
-function trimToBriefMode(fullResponse: any, transcript: string, metrics: Metrics, depth: "brief" | "deep"): any {
-  if (depth === "deep") return fullResponse;
+function trimScriptToLength(script: string, targetSeconds: number): string {
+  // Estimate at 150 WPM (2.5 words per second)
+  const wordsPerSecond = 2.5;
+  const targetWords = Math.floor(targetSeconds * wordsPerSecond);
+  const currentWords = script.split(/\s+/).length;
   
-  // Trim to Brief mode requirements
+  if (currentWords <= targetWords) {
+    return script;
+  }
+  
+  console.log(`Script length: ${currentWords} words, target: ${targetWords} words for ${targetSeconds}s`);
+  
+  let trimmed = script;
+  
+  // Step 1: Strip hedges and filler phrases
+  const hedges = /\b(really|just|actually|sort of|kind of|basically|essentially|literally|quite|rather|pretty much|very much|somewhat|fairly|relatively)\b/gi;
+  trimmed = trimmed.replace(hedges, '');
+  
+  // Step 2: Collapse extra clauses safely
+  trimmed = trimmed.replace(/,\s*which\s+[^,]+,/g, ','); // Remove ", which [clause],"
+  trimmed = trimmed.replace(/\s+and\s+[^.]+\s+and\s+/g, ' and '); // Collapse multiple "and" chains
+  trimmed = trimmed.replace(/\s+that\s+is\s+[^,]+,/g, ','); // Remove ", that is [phrase],"
+  
+  // Step 3: Use shorter synonyms
+  const synonyms: [RegExp, string][] = [
+    [/\butilize\b/gi, 'use'],
+    [/\bfacilitate\b/gi, 'enable'],
+    [/\boptimize\b/gi, 'improve'],
+    [/\bleverage\b/gi, 'use'],
+    [/\bimplement\b/gi, 'build'],
+    [/\bmethodology\b/gi, 'method'],
+    [/\bfunctionality\b/gi, 'features'],
+  ];
+  
+  synonyms.forEach(([pattern, replacement]) => {
+    trimmed = trimmed.replace(pattern, replacement);
+  });
+  
+  // Step 4: Clean up extra spaces
+  trimmed = trimmed.replace(/\s+/g, ' ').trim();
+  
+  // Preserve CTA: extract it, trim body, reattach
+  const ctaMatch = trimmed.match(/(.+)(\s+(?:I'm targeting|I'm actively|I'm excited|I'm pursuing|I'm seeking).+\?)$/);
+  if (ctaMatch) {
+    const [, body, cta] = ctaMatch;
+    const bodyWords = body.split(/\s+/);
+    const ctaWords = cta.split(/\s+/);
+    const maxBodyWords = targetWords - ctaWords.length;
+    
+    if (bodyWords.length > maxBodyWords) {
+      const trimmedBody = bodyWords.slice(0, maxBodyWords).join(' ');
+      trimmed = `${trimmedBody}${cta}`;
+    }
+  }
+  
+  const finalWords = trimmed.split(/\s+/).length;
+  console.log(`Script trimmed from ${currentWords} to ${finalWords} words`);
+  
+  return trimmed;
+}
+
+function trimToBriefCompliance(fullResponse: any, transcript: string, metrics: Metrics): any {
+  console.log(`Brief compliance trim: ${fullResponse.directQuotes?.length || 0} quotes, ${fullResponse.lineEdits?.length || 0} edits, ${fullResponse.coachingTips?.length || 0} tips`);
+  
+  // 1. Trim directQuotes to ≤2 (prioritize metrics/business levers)
+  let quotes = fullResponse.directQuotes || [];
+  const metricQuote = quotes.find((q: string) => /(\d+%|\$\d+|\d+[KMB]|revenue|sales|efficiency|conversion|activation)/i.test(q));
+  const businessQuote = quotes.find((q: string) => q !== metricQuote && /business|impact|growth|value|ROI|profit/i.test(q));
+  
+  const trimmedQuotes = [];
+  if (metricQuote) trimmedQuotes.push(metricQuote);
+  if (businessQuote && trimmedQuotes.length < 2) trimmedQuotes.push(businessQuote);
+  
+  // Fill remaining slots with most actionable quotes
+  quotes.filter(q => !trimmedQuotes.includes(q)).slice(0, 2 - trimmedQuotes.length).forEach(q => trimmedQuotes.push(q));
+  
+  // 2. Trim lineEdits to exactly 2 (prioritize cadence + power-verb)
+  let edits = fullResponse.lineEdits || [];
+  const cadenceEdit = edits.find((e: any) => /shorten|tight|pause|breath|trim|syllable/i.test(e.why));
+  const powerVerbEdit = edits.find((e: any) => 
+    /drove|led|shipped|launched|delivered|created|scaled|reduced/i.test(e.upgrade) || 
+    /verbs.*drove|verbs.*led|verbs.*delivered|verbs.*stronger/i.test(e.why)
+  );
+  
+  const trimmedEdits = [];
+  if (cadenceEdit) trimmedEdits.push(cadenceEdit);
+  if (powerVerbEdit && powerVerbEdit !== cadenceEdit && trimmedEdits.length < 2) {
+    trimmedEdits.push(powerVerbEdit);
+  }
+  
+  // Fill remaining slots with impactful edits (%/$, ROI, conversion)
+  if (trimmedEdits.length < 2) {
+    const impactEdits = edits.filter(e => !trimmedEdits.includes(e) && 
+      /ROI|impact|revenue|\$|%|conversion|activation/i.test(e.why || e.upgrade));
+    impactEdits.slice(0, 2 - trimmedEdits.length).forEach(e => trimmedEdits.push(e));
+  }
+  
+  // Final fallback: use first available edits
+  while (trimmedEdits.length < 2 && edits.length > trimmedEdits.length) {
+    const nextEdit = edits.find(e => !trimmedEdits.includes(e));
+    if (nextEdit) trimmedEdits.push(nextEdit);
+  }
+  
+  // 3. Ensure coachingTips ∈ [2,3]
+  let tips = fullResponse.coachingTips || [];
+  if (tips.length < 2) {
+    // Synthesize one tip from transcript
+    const percentMatch = transcript.match(/(\d+%)/i);
+    const weakVerbMatch = transcript.match(/\b(I\s+(?:helped|like|worked))\b/i);
+    
+    if (percentMatch && !tips.some(t => t.includes('%'))) {
+      tips.push(`You mentioned "${percentMatch[1]}" — convert to business impact: "${percentMatch[1]} = $X revenue this quarter"`);
+    } else if (weakVerbMatch && !tips.some(t => t.includes(weakVerbMatch[1]))) {
+      const phrase = weakVerbMatch[1];
+      const strongVerb = phrase.includes('helped') ? 'I drove' : phrase.includes('like') ? 'I lead' : 'I built';
+      tips.push(`Replace "${phrase}" with "${strongVerb}" — own your transformational role`);
+    } else {
+      tips.push(`Strengthen your value proposition — lead with the transformation you create, not just tasks you completed`);
+    }
+  } else if (tips.length > 3) {
+    // Keep the 3 most transcript-anchored tips
+    const transcriptTerms = transcript.toLowerCase().split(/\s+/);
+    tips = tips
+      .map(tip => ({
+        tip,
+        anchored: transcriptTerms.some(term => tip.toLowerCase().includes(term) && term.length > 3)
+      }))
+      .sort((a, b) => b.anchored ? 1 : -1)
+      .slice(0, 3)
+      .map(item => item.tip);
+  }
+  
   const briefResponse = {
     ...fullResponse,
-    directQuotes: fullResponse.directQuotes?.slice(0, 2) || [],
-    lineEdits: fullResponse.lineEdits?.slice(0, 2) || [],
-    coachingTips: generateContextualTips(transcript, metrics, "brief"),
+    directQuotes: trimmedQuotes.slice(0, 2),
+    lineEdits: trimmedEdits.slice(0, 2),
+    coachingTips: tips.slice(0, 3),
   };
   
   // Remove Deep-only fields
   delete briefResponse.aboutRewrite;
   delete briefResponse.nextSteps;
   
+  console.log(`Brief compliance result: ${briefResponse.directQuotes.length} quotes, ${briefResponse.lineEdits.length} edits, ${briefResponse.coachingTips.length} tips`);
   return briefResponse;
 }
 
@@ -285,14 +508,14 @@ JSON RESPONSE REQUIRED:
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await openai!.chat.completions.create({
-        model: "gpt-4o-mini",
+      model: "gpt-4o-mini",
         temperature: 0.4,
-        messages: [
+      messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
-      });
+      ],
+      response_format: { type: "json_object" },
+    });
 
       const content = response.choices[0]?.message?.content;
       if (!content) throw new Error("Empty response from OpenAI");
@@ -319,8 +542,49 @@ JSON RESPONSE REQUIRED:
       console.error(`Coaching API: Attempt ${attempt + 1} failed:`, error);
       
       if (attempt === 0) {
-        // Add regeneration hint to system prompt for second attempt
-        systemPrompt += `\n\nREGENERATION NOTE: Previous attempt failed validation. Ensure JSON has exactly the required fields with minimum lengths.`;
+        // Analyze validation error and create specific checklist
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        let specificNudge = "\n\nREGENERATION CHECKLIST:";
+        
+        // Parse Zod validation errors for specific missing items
+        if (errorMessage.includes("directQuotes") || errorMessage.includes("Brief mode: directQuotes must be ≤2")) {
+          if (depth === "brief") {
+            specificNudge += "\n- Brief mode: keep ≤2 direct quotes (prioritize metrics/business impact)";
+          } else {
+            specificNudge += "\n- Include ≥3 directQuotes including the metric line (25%, $X, etc)";
+          }
+        }
+        
+        if (errorMessage.includes("lineEdits") || errorMessage.includes("Brief mode: lineEdits must be ≤2")) {
+          if (depth === "brief") {
+            specificNudge += "\n- Brief mode: keep ≤2 line edits prioritizing cadence and power-verb";
+          } else {
+            specificNudge += "\n- Include ≥3 lineEdits covering: cadence (pause/trim), power-verb (drove/led), ROI (revenue/impact)";
+          }
+        }
+        
+        if (errorMessage.includes("CTA") || errorMessage.includes("polishedScript")) {
+          specificNudge += "\n- End polishedScript with CTA question (? mark required)";
+        }
+        
+        if (errorMessage.includes("coachingTips") || errorMessage.includes("Deep mode requires 3-5") || errorMessage.includes("Brief mode: coachingTips must be 2-3")) {
+          if (depth === "brief") {
+            specificNudge += `\n- Brief mode: ensure 2-3 transcript-specific tips; end polishedScript with CTA`;
+          } else {
+            specificNudge += `\n- Include 3-5 transcript-specific coaching tips. Reference the '%' quote with a %→$ conversion, or the 'helped' phrasing with verb-strengthening, and include mechanism/scope tip`;
+          }
+        }
+        
+        if (depth === "deep") {
+          if (errorMessage.includes("aboutRewrite")) {
+            specificNudge += "\n- Include aboutRewrite (3-4 lines, business-impact first)";
+          }
+          if (errorMessage.includes("nextSteps")) {
+            specificNudge += "\n- Include 3-5 nextSteps items";
+          }
+        }
+        
+        systemPrompt += specificNudge;
       }
     }
   }
@@ -458,20 +722,48 @@ export async function POST(req: Request) {
       }
     }
 
+    // Apply mode-specific post-processing
+    if (depth === "deep" && validatedResponse.coachingTips) {
+      // Deep mode: tip synthesizer for 3-5 tips
+      const enhancedTips = synthesizeDeepTips(
+        validatedResponse.coachingTips,
+        transcript,
+        metrics,
+        validatedResponse.directQuotes || []
+      );
+      validatedResponse.coachingTips = enhancedTips;
+    } else if (depth === "brief") {
+      // Brief mode: strict compliance trim (≤2 quotes, ≤2 edits, 2-3 tips)
+      validatedResponse = trimToBriefCompliance(validatedResponse, transcript, metrics);
+    }
+
     // Apply objective scoring blend (80% objective, 20% LLM)
     const finalOverallScore = Math.round(
       (objectiveScoring.overall * 0.8 + (validatedResponse.overallScoreLLM || 7) * 0.2) * 10
     ) / 10;
 
-    // Ensure CTA in polished script
-    const scriptWithCta = ensureCtaEnding(validatedResponse.polishedScript, targetRole);
-
+    // Apply pitch length guard and CTA ensuring
+    let scriptWithCta = ensureCtaEnding(validatedResponse.polishedScript, targetRole);
+    scriptWithCta = trimScriptToLength(scriptWithCta, pitchLengthSec);
+    
+    // Ensure mirrorBack uses first name and direct voice
+    let mirrorBack = validatedResponse.mirrorBack || "";
+    // Remove "someone" phrasing for direct voice first
+    mirrorBack = mirrorBack.replace(/\bsomeone\b/gi, 'you');
+    
+    // Add first name if not present and we have one
+    if (firstName && !mirrorBack.toLowerCase().includes(firstName.toLowerCase())) {
+      // If mirrorBack starts with description, add name at the beginning
+      mirrorBack = `${firstName}, ${mirrorBack.replace(/^[A-Z]/, (c) => c.toLowerCase())}`;
+    }
+    
     // Construct final response (cast to satisfy interface)
     const finalResponse = {
       ...validatedResponse,
       overallScore: Math.min(10, Math.max(0, finalOverallScore)),
       rubric: objectiveScoring,
       polishedScript: scriptWithCta,
+      mirrorBack,
     } as CoachingResponse;
 
     console.log(`Coaching API: Success - score ${finalResponse.overallScore}, ${finalResponse.directQuotes?.length || 0} quotes`);
