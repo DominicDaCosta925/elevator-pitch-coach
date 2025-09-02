@@ -229,13 +229,29 @@ Provide coaching that makes them rethink their entire professional positioning a
       return NextResponse.json(getEnhancedMockResponse(transcript));
     }
 
-    // Ensure all required fields are present and properly structured
+    // Ensure all required fields are present and properly structured with valid 1-10 scoring
     const enhancedResponse: CoachingResponse = {
-      overallScore: json.overallScore ?? 5.0,
-      executivePresence: json.executivePresence ?? { score: 5, feedback: "", improvement: "" },
-      strategicPositioning: json.strategicPositioning ?? { score: 5, feedback: "", improvement: "" },
-      credibilityBuilding: json.credibilityBuilding ?? { score: 5, feedback: "", improvement: "" },
-      audienceEngagement: json.audienceEngagement ?? { score: 5, feedback: "", improvement: "" },
+      overallScore: Math.min(10, Math.max(1, json.overallScore ?? 5.0)),
+      executivePresence: {
+        score: Math.min(10, Math.max(1, json.executivePresence?.score ?? 5)),
+        feedback: json.executivePresence?.feedback ?? "",
+        improvement: json.executivePresence?.improvement ?? ""
+      },
+      strategicPositioning: {
+        score: Math.min(10, Math.max(1, json.strategicPositioning?.score ?? 5)),
+        feedback: json.strategicPositioning?.feedback ?? "",
+        improvement: json.strategicPositioning?.improvement ?? ""
+      },
+      credibilityBuilding: {
+        score: Math.min(10, Math.max(1, json.credibilityBuilding?.score ?? 5)),
+        feedback: json.credibilityBuilding?.feedback ?? "",
+        improvement: json.credibilityBuilding?.improvement ?? ""
+      },
+      audienceEngagement: {
+        score: Math.min(10, Math.max(1, json.audienceEngagement?.score ?? 5)),
+        feedback: json.audienceEngagement?.feedback ?? "",
+        improvement: json.audienceEngagement?.improvement ?? ""
+      },
       strengths: json.strengths ?? [],
       priorityImprovements: json.priorityImprovements ?? [],
       polishedScript: json.polishedScript ?? "",
