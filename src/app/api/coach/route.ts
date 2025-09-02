@@ -7,8 +7,52 @@ import type { CoachingResponse } from "@/lib/types";
 export const runtime = "nodejs";
 
 const openai = process.env.OPENAI_API_KEY 
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  ? new OpenAI({ 
+      apiKey: process.env.OPENAI_API_KEY,
+      timeout: 30000, // 30s timeout
+      maxRetries: 1
+    })
   : null;
+
+// Cached constants for performance  
+const SYSTEM_PROMPT_COMPACT = `You are Dr. Alexandra Sterling, executive coach. Voice: warm, direct. Quote exact words, create breakthrough moments.
+
+OUTPUT STRUCTURE:
+{
+  "overallScoreLLM": number (1-10),
+  "executivePresence": {"score": number, "feedback": string, "improvement": string},
+  "strategicPositioning": {"score": number, "feedback": string, "improvement": string}, 
+  "credibilityBuilding": {"score": number, "feedback": string, "improvement": string},
+  "audienceEngagement": {"score": number, "feedback": string, "improvement": string},
+  "directQuotes": [string] (≥3, include metrics),
+  "mirrorBack": string (address first name once, warm+specific),
+  "breakthrough": string,
+  "lineEdits": [{"quote": string, "upgrade": string, "why": string}] (≥3: cadence+power-verb+ROI),
+  "polishedScript": string (must end with CTA),
+  "coachingTips": [string] (3-5),
+  "aboutRewrite": string (3-4 lines),
+  "nextSteps": [string] (3-5)
+}`;
+
+const JSON_SCHEMA_DEEP = {
+  type: "object",
+  properties: {
+    overallScoreLLM: { type: "number", minimum: 1, maximum: 10 },
+    executivePresence: { type: "object", properties: { score: { type: "number" }, feedback: { type: "string" }, improvement: { type: "string" } }, required: ["score", "feedback", "improvement"] },
+    strategicPositioning: { type: "object", properties: { score: { type: "number" }, feedback: { type: "string" }, improvement: { type: "string" } }, required: ["score", "feedback", "improvement"] },
+    credibilityBuilding: { type: "object", properties: { score: { type: "number" }, feedback: { type: "string" }, improvement: { type: "string" } }, required: ["score", "feedback", "improvement"] },
+    audienceEngagement: { type: "object", properties: { score: { type: "number" }, feedback: { type: "string" }, improvement: { type: "string" } }, required: ["score", "feedback", "improvement"] },
+    directQuotes: { type: "array", items: { type: "string" }, minItems: 3 },
+    mirrorBack: { type: "string", minLength: 20 },
+    breakthrough: { type: "string", minLength: 20 },
+    lineEdits: { type: "array", items: { type: "object", properties: { quote: { type: "string" }, upgrade: { type: "string" }, why: { type: "string" } }, required: ["quote", "upgrade", "why"] }, minItems: 3 },
+    polishedScript: { type: "string", minLength: 50 },
+    aboutRewrite: { type: "string", minLength: 50 },
+    coachingTips: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 5 },
+    nextSteps: { type: "array", items: { type: "string" }, minItems: 3 }
+  },
+  required: ["overallScoreLLM", "executivePresence", "strategicPositioning", "credibilityBuilding", "audienceEngagement", "directQuotes", "mirrorBack", "breakthrough", "lineEdits", "polishedScript", "aboutRewrite", "coachingTips", "nextSteps"]
+};
 
 type Metrics = {
   durationSec: number;
@@ -418,6 +462,86 @@ function trimToBriefCompliance(fullResponse: any, transcript: string, metrics: M
   return briefResponse;
 }
 
+function truncateTranscriptSafely(transcript: string, maxTokens = 400): { text: string, truncated: boolean } {
+  const words = transcript.split(/\s+/);
+  if (words.length <= maxTokens) return { text: transcript, truncated: false };
+  
+  // Keep opening + any lines with metrics
+  const sentences = transcript.split(/[.!?]+/);
+  const opening = sentences[0] || "";
+  const metricSentences = sentences.filter(s => /\d+%|\$\d+|users|ARR|MAU|revenue|efficiency/i.test(s));
+  
+  const kept = [opening, ...metricSentences.slice(0, 2)].join('. ').trim();
+  return { 
+    text: kept.length > 50 ? kept : transcript.slice(0, maxTokens * 4), 
+    truncated: true 
+  };
+}
+
+async function generateCoachingFast(
+  transcript: string, 
+  metrics: Metrics, 
+  targetRole: string, 
+  pitchLengthSec: number,
+  firstName: string
+): Promise<{ response: any, timings: any, meta: any }> {
+  const startTime = performance.now();
+  const timings: any = {};
+  
+  // Token budget safeguard
+  const { text: safeTranscript, truncated } = truncateTranscriptSafely(transcript);
+  timings.buildPromptMs = performance.now() - startTime;
+  
+  // Slim prompt (60-70% reduction)
+  const userPrompt = `TRANSCRIPT: "${safeTranscript}"
+METRICS: ${metrics.durationSec}s, ${metrics.wordsPerMinute}wpm, ${metrics.fillerCount} fillers, readability ${metrics.readability}
+TARGET: ${targetRole}, ${pitchLengthSec}s pitch
+NAME: ${firstName}
+
+Provide coaching with: 3+ exact quotes, 3+ line edits (quote→upgrade→why), realistic scores, warm mirrorBack using first name, breakthrough insight, polished script, about rewrite, 3-5 specific tips, 3+ next steps.`;
+
+  const llmStart = performance.now();
+  
+  try {
+    if (!openai) throw new Error("OpenAI not configured");
+    
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.25,
+      top_p: 0.9,
+      max_tokens: 600, // Always Deep content, trim locally
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT_COMPACT },
+        { role: "user", content: userPrompt }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    timings.llmMs = performance.now() - llmStart;
+    const validationStart = performance.now();
+    
+    const content = response.choices[0]?.message?.content;
+    if (!content) throw new Error("No response content");
+    
+    const parsed = JSON.parse(content);
+    timings.validationMs = performance.now() - validationStart;
+    
+    return {
+      response: parsed,
+      timings,
+      meta: { 
+        truncated, 
+        tokens: response.usage?.total_tokens || 0,
+        model: "gpt-4o-mini" 
+      }
+    };
+    
+  } catch (error) {
+    console.error("Fast coaching generation failed:", error);
+    throw error;
+  }
+}
+
 async function generateCoachingWithRetry(
   transcript: string, 
   metrics: Metrics, 
@@ -460,62 +584,25 @@ TONE EXAMPLES:
 
 Return only valid JSON with all required fields. Be specific, warm, and transformational.`;
 
-  const userPrompt = `COACHING SESSION WITH: "${transcript}"
+  const userPrompt = `TRANSCRIPT: "${transcript}"
+METRICS: ${metrics.durationSec}s, ${metrics.wordsPerMinute}wpm, ${metrics.fillerCount} fillers, readability ${metrics.readability}
+TARGET: ${targetRole}, ${pitchLengthSec}s pitch
+NAME: ${firstName}
 
-PERFORMANCE DATA: 
-- Duration: ${metrics.durationSec}s | Pace: ${metrics.wordsPerMinute} wpm | Fillers: ${metrics.fillerCount} | Readability: ${metrics.readability}
-- Target role: ${targetRole} | Desired length: ${pitchLengthSec}s
-
-YOUR COACHING MISSION:
-${firstName ? firstName : 'This person'} just shared their professional story. As Dr. Sterling, you need to:
-
-1. LISTEN FOR GOLD: Extract 3+ exact quotes, especially any metrics/percentages they mentioned
-2. MIRROR THEN ELEVATE: Start with what's strong, then show the bigger opportunity they're missing
-3. SURGICAL EDITS: Provide 3+ specific upgrades:
-   - One cadence edit (remove filler/redundancy) 
-   - One power-verb swap (helped→drove, worked→led)
-   - One ROI reframe (features→business impact)
-4. BREAKTHROUGH MOMENT: Create one "aha" insight that reframes their entire positioning
-5. REALISTIC SCORING: Most professionals score 6-7; be honest but encouraging
-
-WHAT MAKES THIS TRANSFORMATIONAL:
-- Quote their exact words, then reveal the bigger story
-- ${firstName ? `Use ${firstName}'s name once` : 'Use their name if mentioned'} to show personal investment
-- Address specific performance issues (pace/fillers) with concrete advice
-- End polished script with strong CTA for ${targetRole} roles
-
-JSON RESPONSE REQUIRED:
-{
-  "overallScoreLLM": number (6-8 typical, be realistic),
-  "executivePresence": {"score": number, "feedback": string, "improvement": string},
-  "strategicPositioning": {"score": number, "feedback": string, "improvement": string}, 
-  "credibilityBuilding": {"score": number, "feedback": string, "improvement": string},
-  "audienceEngagement": {"score": number, "feedback": string, "improvement": string},
-  "directQuotes": [string, string, string] (include metrics if mentioned),
-  "mirrorBack": string (warm reflection, 1-2 sentences),
-  "breakthrough": string (one "aha" reframe),
-  "lineEdits": [
-    {"quote": string, "upgrade": string, "why": string} (cadence edit),
-    {"quote": string, "upgrade": string, "why": string} (power-verb edit), 
-    {"quote": string, "upgrade": string, "why": string} (ROI edit)
-  ],
-  "polishedScript": string (${pitchLengthSec}s when spoken, strong CTA ending),
-  "aboutRewrite": string (3-4 lines, business impact first),
-  "coachingTips": [string, string, string] (3-5 concrete actions),
-  "nextSteps": [string, string, string] (3-5 specific next moves)
-}`;
+Coach with: 3+ exact quotes (include metrics), 3+ line edits (cadence+power-verb+ROI), realistic scores, warm mirrorBack using first name, breakthrough insight, polished script ending with CTA, 3-5 specific tips, aboutRewrite (3-4 lines), nextSteps (3-5).`;
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await openai!.chat.completions.create({
-      model: "gpt-4o-mini",
-        temperature: 0.4,
-      messages: [
-          { role: "system", content: systemPrompt },
+        model: "gpt-4o-mini",
+        temperature: 0.25, // Optimized for speed
+        max_tokens: 600, // Cap generation length
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT_COMPACT }, // Use compact prompt
           { role: "user", content: userPrompt },
-      ],
-      response_format: { type: "json_object" },
-    });
+        ],
+        response_format: { type: "json_object" },
+      });
 
       const content = response.choices[0]?.message?.content;
       if (!content) throw new Error("Empty response from OpenAI");
@@ -690,6 +777,9 @@ function createEnhancedMockResponse(transcript: string, targetRole: string, metr
 }
 
 export async function POST(req: Request) {
+  const requestStart = performance.now();
+  const timings: any = {};
+  
   try {
     const body = (await req.json()) as CoachRequest;
     const transcript = (body.transcript || "").trim();
@@ -702,72 +792,106 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "missing transcript" }, { status: 400 });
     }
 
-    // Compute objective scoring
+    // Local computations (no LLM needed)
+    const objectiveStart = performance.now();
     const objectiveScoring = computeObjectiveScoring(metrics, transcript);
     const firstName = extractFirstName(transcript);
+    timings.objectiveMs = performance.now() - objectiveStart;
 
-    console.log(`Coaching API: Processing ${transcript.length} chars, ${depth} mode, objective score: ${objectiveScoring.overall}`);
+    console.log(`Coaching API: ${transcript.length} chars, ${depth} mode`);
 
-    let validatedResponse: ValidatedCoachingResponse;
+    let deepResponse: any;
+    let meta: any = {};
 
     if (!openai) {
-      console.warn("Coaching API: No OpenAI key, using enhanced mock");
-      validatedResponse = createEnhancedMockResponse(transcript, targetRole, metrics, depth);
+      console.warn("Coaching API: No OpenAI key, using mock");
+      const mockStart = performance.now();
+      deepResponse = createEnhancedMockResponse(transcript, targetRole, metrics, "deep");
+      timings.llmMs = performance.now() - mockStart;
+      meta.fallbackToMock = true;
     } else {
       try {
-        validatedResponse = await generateCoachingWithRetry(transcript, metrics, targetRole, pitchLengthSec, firstName, depth);
+        // Always generate Deep content, surgical optimizations applied
+        const llmStart = performance.now();
+        deepResponse = await generateCoachingWithRetry(transcript, metrics, targetRole, pitchLengthSec, firstName, "deep");
+        timings.llmMs = performance.now() - llmStart;
+        meta.model = "gpt-4o-mini";
       } catch (error) {
-        console.error("Coaching API: Falling back to mock due to generation failure:", error);
-        validatedResponse = createEnhancedMockResponse(transcript, targetRole, metrics, depth);
+        console.error("Coaching API: Generation failed, single retry:", error);
+        
+        // Max 1 retry 
+        try {
+          const retryStart = performance.now();
+          deepResponse = await generateCoachingWithRetry(transcript, metrics, targetRole, pitchLengthSec, firstName, "deep");
+          timings.llmMs = performance.now() - retryStart;
+          meta.model = "gpt-4o-mini";
+          meta.retried = true;
+        } catch (retryError) {
+          console.error("Coaching API: Retry failed, using mock fallback");
+          const mockStart = performance.now();
+          deepResponse = createEnhancedMockResponse(transcript, targetRole, metrics, "deep");
+          timings.llmMs = performance.now() - mockStart;
+          meta.fallbackToMock = true;
+        }
       }
     }
 
-    // Apply mode-specific post-processing
-    if (depth === "deep" && validatedResponse.coachingTips) {
-      // Deep mode: tip synthesizer for 3-5 tips
-      const enhancedTips = synthesizeDeepTips(
-        validatedResponse.coachingTips,
-        transcript,
-        metrics,
-        validatedResponse.directQuotes || []
-      );
-      validatedResponse.coachingTips = enhancedTips;
-    } else if (depth === "brief") {
+    // Local post-processing (fast)
+    const postProcessStart = performance.now();
+    
+    // Apply mode-specific trimming locally
+    let finalResponse: any;
+    if (depth === "brief") {
       // Brief mode: strict compliance trim (≤2 quotes, ≤2 edits, 2-3 tips)
-      validatedResponse = trimToBriefCompliance(validatedResponse, transcript, metrics);
+      finalResponse = trimToBriefCompliance(deepResponse, transcript, metrics);
+    } else {
+      // Deep mode: tip synthesizer for 3-5 tips
+      if (deepResponse.coachingTips) {
+        const enhancedTips = synthesizeDeepTips(
+          deepResponse.coachingTips,
+          transcript,
+          metrics,
+          deepResponse.directQuotes || []
+        );
+        deepResponse.coachingTips = enhancedTips;
+      }
+      finalResponse = deepResponse;
     }
 
     // Apply objective scoring blend (80% objective, 20% LLM)
     const finalOverallScore = Math.round(
-      (objectiveScoring.overall * 0.8 + (validatedResponse.overallScoreLLM || 7) * 0.2) * 10
+      (objectiveScoring.overall * 0.8 + (finalResponse.overallScoreLLM || 7) * 0.2) * 10
     ) / 10;
 
-    // Apply pitch length guard and CTA ensuring
-    let scriptWithCta = ensureCtaEnding(validatedResponse.polishedScript, targetRole);
+    // Apply pitch length guard and CTA ensuring (local processing)
+    let scriptWithCta = ensureCtaEnding(finalResponse.polishedScript || "", targetRole);
     scriptWithCta = trimScriptToLength(scriptWithCta, pitchLengthSec);
     
     // Ensure mirrorBack uses first name and direct voice
-    let mirrorBack = validatedResponse.mirrorBack || "";
-    // Remove "someone" phrasing for direct voice first
+    let mirrorBack = finalResponse.mirrorBack || "";
     mirrorBack = mirrorBack.replace(/\bsomeone\b/gi, 'you');
-    
-    // Add first name if not present and we have one
     if (firstName && !mirrorBack.toLowerCase().includes(firstName.toLowerCase())) {
-      // If mirrorBack starts with description, add name at the beginning
       mirrorBack = `${firstName}, ${mirrorBack.replace(/^[A-Z]/, (c) => c.toLowerCase())}`;
     }
     
-    // Construct final response (cast to satisfy interface)
-    const finalResponse = {
-      ...validatedResponse,
+    timings.postProcessMs = performance.now() - postProcessStart;
+    timings.totalMs = performance.now() - requestStart;
+    
+    // Construct final response with performance telemetry
+    const result = {
+      ...finalResponse,
       overallScore: Math.min(10, Math.max(0, finalOverallScore)),
       rubric: objectiveScoring,
       polishedScript: scriptWithCta,
       mirrorBack,
+      meta: {
+        performance: timings,
+        ...meta
+      }
     } as CoachingResponse;
 
-    console.log(`Coaching API: Success - score ${finalResponse.overallScore}, ${finalResponse.directQuotes?.length || 0} quotes`);
-    return NextResponse.json(finalResponse);
+    console.log(`Coaching API: ${timings.totalMs.toFixed(1)}ms total (LLM: ${timings.llmMs?.toFixed(1) || 0}ms)`);
+    return NextResponse.json(result);
 
   } catch (error: any) {
     console.error("Coaching API: Unexpected error:", error);
