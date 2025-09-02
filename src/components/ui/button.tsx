@@ -1,63 +1,57 @@
-import React from 'react';
-import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
+import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
+import { cva, type VariantProps } from "class-variance-authority"
+
+import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-smooth focus-ring disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        primary:
-          "bg-blue-600 text-white shadow-lg shadow-blue-600/25 hover:bg-blue-700 hover:shadow-blue-700/25 active:scale-[0.98]",
-        secondary:
-          "bg-gray-100 text-gray-900 shadow-sm hover:bg-gray-200 active:scale-[0.98]",
-        ghost:
-          "text-gray-700 hover:bg-gray-100 hover:text-gray-900 active:scale-[0.98]",
-        outline:
-          "border border-gray-200 bg-white text-gray-900 shadow-sm hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98]",
-        success:
-          "bg-green-600 text-white shadow-lg shadow-green-600/25 hover:bg-green-700 hover:shadow-green-700/25 active:scale-[0.98]",
+        default:
+          "bg-primary text-primary-foreground shadow hover:bg-primary/90",
         destructive:
-          "bg-red-600 text-white shadow-lg shadow-red-600/25 hover:bg-red-700 hover:shadow-red-700/25 active:scale-[0.98]",
+          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+        outline:
+          "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
+        secondary:
+          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        sm: "h-9 px-3 text-sm",
-        md: "h-11 px-6 text-sm",
-        lg: "h-13 px-8 text-base",
-        icon: "h-11 w-11",
+        default: "h-9 px-4 py-2",
+        sm: "h-8 rounded-md px-3 text-xs",
+        lg: "h-10 rounded-md px-8",
+        icon: "h-9 w-9",
       },
     },
     defaultVariants: {
-      variant: "primary",
-      size: "md",
+      variant: "default",
+      size: "default",
     },
   }
-);
+)
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
-  loading?: boolean;
-  children: React.ReactNode;
+  asChild?: boolean
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, loading, children, disabled, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button"
     return (
-      <button
+      <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
-        disabled={disabled || loading}
         {...props}
-      >
-        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-        {children}
-      </button>
-    );
+      />
+    )
   }
-);
+)
+Button.displayName = "Button"
 
-Button.displayName = "Button";
-
-export { Button, buttonVariants };
+export { Button, buttonVariants }

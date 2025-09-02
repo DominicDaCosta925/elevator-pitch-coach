@@ -1,15 +1,22 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-// Enhanced font loading with multiple weights
+// Premium font pairing: Plus Jakarta Sans for headings, Inter for body
 const inter = Inter({ 
   subsets: ["latin"],
   variable: "--font-inter",
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700"],
   display: 'swap',
-  fallback: ['ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+});
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-plus-jakarta-sans", 
+  weight: ["500", "600", "700", "800"],
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -26,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className={inter.variable}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${plusJakartaSans.variable}`}>
       <head>
         {/* Preload critical fonts */}
         <link
@@ -45,7 +52,7 @@ export default function RootLayout({
           as="style"
         />
       </head>
-      <body className={`${inter.variable} antialiased`}>
+      <body className={`${inter.variable} ${plusJakartaSans.variable} antialiased font-sans`}>
         <ThemeProvider 
           attribute="class" 
           defaultTheme="dark" 
@@ -55,6 +62,7 @@ export default function RootLayout({
           <div className="min-h-screen bg-background text-foreground">
             {children}
           </div>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
