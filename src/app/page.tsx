@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Mic, Upload, Zap, BarChart3, MessageSquare, ChevronRight, Moon, Sun, Copy, Check } from "lucide-react";
+import { Mic, Upload, Zap, BarChart3, MessageSquare, ChevronRight, Moon, Sun, Copy, Check, Clock, FileText } from "lucide-react";
 import { useTheme } from "next-themes";
 import Recorder from "@/components/Recorder";
 import ScoreCard from "@/components/ScoreCard";
@@ -295,98 +295,128 @@ export default function Page() {
             </p>
           </div>
 
-          <div className="bg-card border rounded-2xl p-8 shadow-sm">
-            <div className="max-w-5xl mx-auto space-y-8">
-              <div className="grid lg:grid-cols-5 gap-8 items-start">
-                {/* Upload Area */}
-                <div className="lg:col-span-2 space-y-6">
-                  <div className="space-y-4">
-                    <label htmlFor="resume-upload" className="text-sm font-medium claude-text block">
-                      Upload Resume
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="resume-upload"
-                        name="resume-upload"
-                        type="file"
-                        accept=".pdf,.docx,.txt"
-                        onChange={(e) => e.target.files?.[0] && setResumeFile(e.target.files[0])}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                        disabled={isGeneratingPitch}
-                        aria-label="Upload resume file"
-                      />
-                      <div className={`
-                        border-2 border-dashed rounded-xl p-6 text-center transition-all
-                        ${resumeFile 
-                          ? 'border-primary/50 bg-primary/5' 
-                          : 'border-border hover:border-primary/30 hover:bg-primary/5'
-                        }
-                        ${isGeneratingPitch ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                      `}>
-                        <Upload className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />
-                        {resumeFile ? (
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium claude-text truncate max-w-full">{resumeFile.name}</p>
-                            <p className="text-xs text-primary font-medium">✓ Ready to generate</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <p className="text-sm claude-text font-medium">Drop file or click to upload</p>
-                            <p className="text-xs text-muted-foreground">PDF, DOCX, or TXT files</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+          <div className="bg-card border rounded-2xl shadow-sm overflow-hidden">
+            <div className="max-w-4xl mx-auto">
+              {/* Header Section */}
+              <div className="bg-gradient-to-r from-primary/5 to-primary/10 px-8 py-6 border-b border-border">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                    <Zap className="w-5 h-5 text-primary" />
                   </div>
-                  
-                  <div className="space-y-3">
-                    <label htmlFor="target-role" className="text-sm font-medium claude-text block">
-                      Target Role <span className="text-muted-foreground font-normal">(Optional)</span>
-                    </label>
-                    <input
-                      id="target-role"
-                      name="target-role"
-                      type="text"
-                      value={targetRole}
-                      onChange={(e) => setTargetRole(e.target.value)}
-                      placeholder="Software Engineer, Product Manager..."
-                      className="w-full px-4 py-3 bg-input border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all claude-text text-sm"
-                      disabled={isGeneratingPitch}
-                    />
+                  <div>
+                    <h3 className="text-xl font-semibold claude-text">Create Your Pitch</h3>
+                    <p className="text-sm text-muted-foreground">Upload your resume and customize your pitch</p>
                   </div>
                 </div>
+              </div>
 
-                {/* Pitch Length & Generate */}
-                <div className="lg:col-span-3 space-y-8">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium claude-text">Pitch Length</h3>
-                    <PitchLengthSlider
-                      value={pitchLength}
-                      onChange={setPitchLength}
-                      onChangeComplete={handlePitchLengthChange}
-                      disabled={isGeneratingPitch}
-                      isUpdating={isAdjustingPitch}
-                    />
-                  </div>
-                  
-                  <button
-                    onClick={handleGeneratePitch}
-                    disabled={!resumeFile || isGeneratingPitch}
-                    className="w-full bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] text-primary-foreground px-8 py-4 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center space-x-3 claude-button shadow-lg hover:shadow-xl"
-                    aria-label={isGeneratingPitch ? "Generating pitch..." : "Generate elevator pitch"}
-                  >
-                    {isGeneratingPitch ? (
-                      <div className="flex items-center space-x-3">
-                        <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        <span>Generating your perfect pitch...</span>
+              {/* Content Section */}
+              <div className="p-8 space-y-8">
+                <div className="grid md:grid-cols-2 gap-8">
+                  {/* Left Column - File Upload */}
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <label htmlFor="resume-upload" className="text-sm font-medium claude-text flex items-center space-x-2">
+                        <Upload className="w-4 h-4" />
+                        <span>Resume Upload</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="resume-upload"
+                          name="resume-upload"
+                          type="file"
+                          accept=".pdf,.docx,.txt"
+                          onChange={(e) => e.target.files?.[0] && setResumeFile(e.target.files[0])}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                          disabled={isGeneratingPitch}
+                          aria-label="Upload resume file"
+                        />
+                        <div className={`
+                          border-2 border-dashed rounded-xl p-6 text-center transition-all
+                          ${resumeFile 
+                            ? 'border-primary/50 bg-primary/5' 
+                            : 'border-border hover:border-primary/30 hover:bg-primary/5'
+                          }
+                          ${isGeneratingPitch ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                        `}>
+                          {resumeFile ? (
+                            <div className="space-y-3">
+                              <div className="w-12 h-12 bg-primary/10 rounded-xl mx-auto flex items-center justify-center">
+                                <FileText className="w-6 h-6 text-primary" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium claude-text truncate">{resumeFile.name}</p>
+                                <p className="text-xs text-primary font-medium mt-1">✓ File ready</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              <Upload className="w-12 h-12 mx-auto text-muted-foreground" />
+                              <div>
+                                <p className="text-sm claude-text font-medium">Drop your resume here</p>
+                                <p className="text-xs text-muted-foreground mt-1">or click to browse</p>
+                                <p className="text-xs text-muted-foreground">PDF, DOCX, TXT (max 10MB)</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <>
-                        <Zap className="w-5 h-5" />
-                        <span>Generate Pitch</span>
-                      </>
-                    )}
-                  </button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <label htmlFor="target-role" className="text-sm font-medium claude-text flex items-center space-x-2">
+                        <MessageSquare className="w-4 h-4" />
+                        <span>Target Role</span>
+                        <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+                      </label>
+                      <input
+                        id="target-role"
+                        name="target-role"
+                        type="text"
+                        value={targetRole}
+                        onChange={(e) => setTargetRole(e.target.value)}
+                        placeholder="e.g., Software Engineer, Product Manager..."
+                        className="w-full px-4 py-3 bg-input border border-border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all claude-text text-sm"
+                        disabled={isGeneratingPitch}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right Column - Pitch Settings */}
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <label className="text-sm font-medium claude-text flex items-center space-x-2">
+                        <Clock className="w-4 h-4" />
+                        <span>Pitch Length</span>
+                      </label>
+                      <PitchLengthSlider
+                        value={pitchLength}
+                        onChange={setPitchLength}
+                        disabled={isGeneratingPitch}
+                      />
+                    </div>
+                    
+                    <div className="pt-4">
+                      <button
+                        onClick={handleGeneratePitch}
+                        disabled={!resumeFile || isGeneratingPitch}
+                        className="w-full bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] text-primary-foreground px-6 py-4 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center space-x-3 claude-button shadow-lg hover:shadow-xl"
+                        aria-label={isGeneratingPitch ? "Generating pitch..." : "Generate elevator pitch"}
+                      >
+                        {isGeneratingPitch ? (
+                          <div className="flex items-center space-x-3">
+                            <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            <span>Generating your pitch...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <Zap className="w-5 h-5" />
+                            <span>Generate Pitch</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -397,20 +427,15 @@ export default function Page() {
                   transition={{ duration: 0.6 }}
                   className="mt-8 pt-8 border-t border-border"
                 >
-                  <PitchLengthSlider
-                    value={pitchLength}
-                    onChange={setPitchLength}
-                    onChangeComplete={handlePitchLengthChange}
-                    disabled={isGeneratingPitch}
-                    isUpdating={isAdjustingPitch}
-                  />
-                  
                   <GeneratedPitch
                     pitch={generatedPitch}
                     targetSeconds={pitchLength}
                     isGenerating={isGeneratingPitch}
                     isAdjusting={isAdjustingPitch}
                     onPractice={handlePracticeGenerated}
+                    onLengthChange={handlePitchLengthChange}
+                    currentLength={pitchLength}
+                    onLengthUpdate={setPitchLength}
                   />
                 </motion.div>
               )}
