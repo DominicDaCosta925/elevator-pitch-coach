@@ -1,16 +1,31 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Mic, Upload, Zap, BarChart3, MessageSquare, ChevronRight, Moon, Sun } from "lucide-react";
+import { Mic, Upload, Zap, BarChart3, MessageSquare, ChevronRight, Moon, Sun, Copy, Check } from "lucide-react";
 import { useTheme } from "next-themes";
 import Recorder from "@/components/Recorder";
 import ScoreCard from "@/components/ScoreCard";
+import EnhancedScoreCard from "@/components/EnhancedScoreCard";
 import ResumeUploader from "@/components/ResumeUploader";
 import PitchLengthSlider from "@/components/PitchLengthSlider";
 import GeneratedPitch from "@/components/GeneratedPitch";
 import { computeMetrics } from "@/lib/metrics";
 import { createRecorder, type RecordingResult } from "@/utils/recorder";
 import type { Metrics } from "@/lib/types";
+
+interface CoachingResponse {
+  overallScore: number;
+  executivePresence: { score: number; feedback: string; improvement: string };
+  strategicPositioning: { score: number; feedback: string; improvement: string };
+  credibilityBuilding: { score: number; feedback: string; improvement: string };
+  audienceEngagement: { score: number; feedback: string; improvement: string };
+  strengths: string[];
+  priorityImprovements: string[];
+  polishedScript: string;
+  aboutRewrite: string;
+  coachingTips: string[];
+  nextSteps: string[];
+}
 
 const ThemeToggle = () => {
   const { theme, setTheme } = useTheme();
@@ -45,7 +60,7 @@ const ThemeToggle = () => {
 export default function Page() {
   const [transcript, setTranscript] = useState("");
   const [metrics, setMetrics] = useState<Metrics | null>(null);
-  const [coach, setCoach] = useState<any>(null);
+  const [coach, setCoach] = useState<CoachingResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -55,6 +70,7 @@ export default function Page() {
   const [isGeneratingPitch, setIsGeneratingPitch] = useState(false);
   const [isAdjustingPitch, setIsAdjustingPitch] = useState(false);
   const [originalPitchLength, setOriginalPitchLength] = useState(50);
+  const [copiedScript, setCopiedScript] = useState(false);
   const recorderRef = useRef<HTMLDivElement>(null);
 
   async function uploadBlob(blob: Blob, durationSec: number, mimeType: string) {
@@ -188,6 +204,24 @@ export default function Page() {
 
   function handlePracticeGenerated() {
     recorderRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  async function copyPolishedScript(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedScript(true);
+      setTimeout(() => setCopiedScript(false), 2000);
+    } catch (err) {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopiedScript(true);
+      setTimeout(() => setCopiedScript(false), 2000);
+    }
   }
 
   return (
@@ -435,7 +469,11 @@ export default function Page() {
             </div>
 
             <div className="space-y-8">
-      {metrics && <ScoreCard m={metrics} />}
+              {metrics && coach && 'overallScore' in coach && 'executivePresence' in coach ? (
+                <EnhancedScoreCard metrics={metrics} coaching={coach} />
+              ) : (
+                metrics && <ScoreCard m={metrics} />
+              )}
 
       {transcript && (
                 <div className="bg-card border rounded-2xl p-6">
@@ -444,12 +482,12 @@ export default function Page() {
                 </div>
       )}
 
-      {coach && (
+      {coach && !('overallScore' in coach) && (
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6">
                     <h3 className="text-lg font-medium text-emerald-600 dark:text-emerald-400 mb-4 claude-text">Strengths</h3>
                     <ul className="space-y-2">
-                      {coach.strengths?.map((s: string, i: number) => (
+                      {(coach as any).strengths?.map((s: string, i: number) => (
                         <li key={i} className="flex items-start space-x-2">
                           <ChevronRight className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
                           <span className="text-sm text-emerald-700 dark:text-emerald-300 claude-text">{s}</span>
@@ -461,7 +499,7 @@ export default function Page() {
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-6">
                     <h3 className="text-lg font-medium text-blue-600 dark:text-blue-400 mb-4 claude-text">Improvements</h3>
                     <ul className="space-y-2">
-                      {coach.improvements?.map((s: string, i: number) => (
+                      {(coach as any).improvements?.map((s: string, i: number) => (
                         <li key={i} className="flex items-start space-x-2">
                           <ChevronRight className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
                           <span className="text-sm text-blue-700 dark:text-blue-300 claude-text">{s}</span>
@@ -471,13 +509,32 @@ export default function Page() {
           </div>
 
                   <div className="md:col-span-2 bg-card border rounded-2xl p-6">
-                    <h3 className="text-lg font-medium mb-4 claude-text">Polished Script</h3>
-                    <p className="text-muted-foreground leading-relaxed claude-text">{coach.polishedScript}</p>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-medium claude-text">Polished Script</h3>
+                      <button
+                        onClick={() => copyPolishedScript((coach as any).polishedScript)}
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors"
+                        title="Copy to clipboard"
+                      >
+                        {copiedScript ? (
+                          <>
+                            <Check className="w-4 h-4" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4" />
+                            Copy
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-muted-foreground leading-relaxed claude-text">{(coach as any).polishedScript}</p>
                   </div>
 
                   <div className="md:col-span-2 bg-card border rounded-2xl p-6">
                     <h3 className="text-lg font-medium mb-4 claude-text">LinkedIn About Section</h3>
-                    <p className="text-muted-foreground leading-relaxed claude-text">{coach.aboutRewrite}</p>
+                    <p className="text-muted-foreground leading-relaxed claude-text">{(coach as any).aboutRewrite}</p>
                   </div>
                 </div>
               )}
