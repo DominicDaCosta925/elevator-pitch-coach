@@ -6,26 +6,15 @@ import { useTheme } from "next-themes";
 import Recorder from "@/components/Recorder";
 import ScoreCard from "@/components/ScoreCard";
 import EnhancedScoreCard from "@/components/EnhancedScoreCard";
+import { QuoteUpgrades } from "@/components/QuoteUpgrades";
+import { DirectQuotes } from "@/components/DirectQuotes";
 import ResumeUploader from "@/components/ResumeUploader";
 import PitchLengthSlider from "@/components/PitchLengthSlider";
 import GeneratedPitch from "@/components/GeneratedPitch";
 import { computeMetrics } from "@/lib/metrics";
 import { createRecorder, type RecordingResult } from "@/utils/recorder";
-import type { Metrics } from "@/lib/types";
-
-interface CoachingResponse {
-  overallScore: number;
-  executivePresence: { score: number; feedback: string; improvement: string };
-  strategicPositioning: { score: number; feedback: string; improvement: string };
-  credibilityBuilding: { score: number; feedback: string; improvement: string };
-  audienceEngagement: { score: number; feedback: string; improvement: string };
-  strengths: string[];
-  priorityImprovements: string[];
-  polishedScript: string;
-  aboutRewrite: string;
-  coachingTips: string[];
-  nextSteps: string[];
-}
+import type { CoachingResponse, Metrics } from "@/lib/types";
+import { validateCoachingResponse } from "@/lib/coaching-schema";
 
 const ThemeToggle = () => {
   const { theme, setTheme } = useTheme();
@@ -71,6 +60,7 @@ export default function Page() {
   const [isAdjustingPitch, setIsAdjustingPitch] = useState(false);
   const [originalPitchLength, setOriginalPitchLength] = useState(50);
   const [copiedScript, setCopiedScript] = useState(false);
+  const [isDeepMode, setIsDeepMode] = useState(false);
   const recorderRef = useRef<HTMLDivElement>(null);
 
   async function uploadBlob(blob: Blob, durationSec: number, mimeType: string) {
@@ -111,7 +101,11 @@ export default function Page() {
       const cRes = await fetch("/api/coach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript: transcriptText, metrics: m }),
+        body: JSON.stringify({ 
+          transcript: transcriptText, 
+          metrics: m,
+          depth: isDeepMode ? "deep" : "brief"
+        }),
       });
       const cJson = await cRes.json();
       setCoach(cJson);
@@ -464,6 +458,22 @@ export default function Page() {
           </div>
 
           <div className="bg-card border rounded-2xl p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-6 p-4 bg-muted/30 rounded-xl">
+              <input
+                type="checkbox"
+                id="deep-mode"
+                checked={isDeepMode}
+                onChange={(e) => setIsDeepMode(e.target.checked)}
+                className="w-4 h-4 text-primary bg-background border-border rounded focus:ring-primary focus:ring-2"
+              />
+              <label htmlFor="deep-mode" className="text-sm font-medium claude-text cursor-pointer">
+                Deep-dive coaching
+              </label>
+              <span className="text-xs text-muted-foreground claude-text">
+                {isDeepMode ? "Comprehensive analysis with detailed breakdowns" : "Quick feedback focused on key improvements"}
+              </span>
+            </div>
+            
             <Recorder onRecorded={handleRecorded} maxSeconds={90} />
             
             {loading && (
@@ -495,7 +505,78 @@ export default function Page() {
 
             <div className="space-y-8">
               {metrics && coach && 'overallScore' in coach && 'executivePresence' in coach ? (
-                <EnhancedScoreCard metrics={metrics} coaching={coach} />
+                <>
+                  {/* Brief Mode: Compact Layout */}
+                  {!isDeepMode ? (
+                    <>
+                      <div className="bg-card border rounded-2xl p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-medium claude-text">Quick Analysis</h3>
+                          <div className="text-2xl font-bold text-primary">{coach.overallScore}/10</div>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-4">{coach.mirrorBack}</p>
+                        <p className="text-sm font-medium text-foreground">{coach.breakthrough}</p>
+                      </div>
+                      
+                      {coach.directQuotes && coach.directQuotes.length > 0 && (
+                        <DirectQuotes quotes={coach.directQuotes} />
+                      )}
+                      
+                      {coach.lineEdits && coach.lineEdits.length > 0 && (
+                        <QuoteUpgrades edits={coach.lineEdits} />
+                      )}
+                      
+                      <div className="bg-card border rounded-2xl p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-medium claude-text">Polished Script</h3>
+                          <button
+                            onClick={() => copyPolishedScript(coach.polishedScript)}
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors"
+                            title="Copy to clipboard"
+                          >
+                            {copiedScript ? (
+                              <>
+                                <Check className="w-4 h-4" />
+                                Copied!
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-4 h-4" />
+                                Copy
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <p className="text-muted-foreground leading-relaxed claude-text">{coach.polishedScript}</p>
+                      </div>
+                      
+                      {coach.coachingTips && coach.coachingTips.length > 0 && (
+                        <div className="bg-card border rounded-2xl p-6">
+                          <h3 className="text-lg font-medium mb-4 claude-text">Action Items</h3>
+                          <ul className="space-y-2">
+                            {coach.coachingTips.map((tip: string, i: number) => (
+                              <li key={i} className="flex items-start space-x-2">
+                                <ChevronRight className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                                <span className="text-sm text-foreground claude-text">{tip}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    /* Deep Mode: Full Layout */
+                    <>
+                      <EnhancedScoreCard metrics={metrics} coaching={coach} />
+                      {coach.directQuotes && coach.directQuotes.length > 0 && (
+                        <DirectQuotes quotes={coach.directQuotes} />
+                      )}
+                      {coach.lineEdits && coach.lineEdits.length > 0 && (
+                        <QuoteUpgrades edits={coach.lineEdits} />
+                      )}
+                    </>
+                  )}
+                </>
               ) : (
                 metrics && <ScoreCard m={metrics} />
               )}

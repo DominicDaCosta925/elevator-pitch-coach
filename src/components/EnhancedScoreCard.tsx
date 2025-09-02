@@ -15,50 +15,7 @@ import {
   Lightbulb,
   MessageSquare
 } from "lucide-react";
-import type { Metrics } from "@/lib/types";
-
-interface CoachingResponse {
-  overallScore: number;
-  personalNote?: string;
-  executivePresence: { 
-    score: number; 
-    feedback: string; 
-    improvement: string; 
-    encouragement?: string;
-  };
-  strategicPositioning: { 
-    score: number; 
-    feedback: string; 
-    improvement: string; 
-    marketInsight?: string;
-  };
-  credibilityBuilding: { 
-    score: number; 
-    feedback: string; 
-    improvement: string; 
-    strengthsToLeverage?: string;
-  };
-  audienceEngagement: { 
-    score: number; 
-    feedback: string; 
-    improvement: string; 
-    callToActionStrategy?: string;
-  };
-  strengths: string[];
-  priorityImprovements: string[];
-  polishedScript: string;
-  aboutRewrite: string;
-  coachingTips: string[];
-  nextSteps: string[];
-  personalizedInsights?: string[];
-  confidenceBuilders?: string[];
-  actionPlan?: {
-    immediate: string[];
-    shortTerm: string[];
-    strategic: string[];
-  };
-  coachingNotes?: string;
-}
+import type { Metrics, CoachingResponse } from "@/lib/types";
 
 interface EnhancedScoreCardProps {
   metrics: Metrics;
