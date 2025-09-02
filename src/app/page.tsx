@@ -18,8 +18,9 @@ import ScoreCard from "@/components/ScoreCard";
 import EnhancedScoreCard from "@/components/EnhancedScoreCard";
 import { QuoteUpgrades } from "@/components/QuoteUpgrades";
 import { DirectQuotes } from "@/components/DirectQuotes";
-// import PitchLengthSlider from "@/components/PitchLengthSlider";
-// import GeneratedPitch from "@/components/GeneratedPitch";
+import PitchLengthSlider from "@/components/PitchLengthSlider";
+import GeneratedPitch from "@/components/GeneratedPitch";
+import ResumeUploader from "@/components/ResumeUploader";
 import { computeMetrics } from "@/lib/metrics";
 import type { CoachingResponse, Metrics } from "@/lib/types";
 
@@ -137,6 +138,15 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null);
   const [isDeepMode, setIsDeepMode] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
+  
+  // Resume pitch generation state
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [targetRole, setTargetRole] = useState("");
+  const [pitchLength, setPitchLength] = useState(30);
+  const [generatedPitch, setGeneratedPitch] = useState("");
+  const [isGeneratingPitch, setIsGeneratingPitch] = useState(false);
+  const [isAdjustingPitch, setIsAdjustingPitch] = useState(false);
+  const [originalPitchLength, setOriginalPitchLength] = useState(30);
 
   async function uploadBlob(blob: Blob, durationSec: number, mimeType: string) {
     const file = new File([blob], `rec-${Date.now()}.webm`, { type: mimeType || 'audio/webm' });
@@ -213,6 +223,95 @@ export default function Page() {
     }
   };
 
+  async function handleGeneratePitch() {
+    if (!resumeFile) return;
+
+    try {
+      setIsGeneratingPitch(true);
+      setError(null);
+
+      const analyzeForm = new FormData();
+      analyzeForm.append("file", resumeFile);
+      
+      const analyzeRes = await fetch("/api/resume-analyze", {
+        method: "POST",
+        body: analyzeForm,
+      });
+      
+      if (!analyzeRes.ok) {
+        const analyzeError = await analyzeRes.json();
+        throw new Error(analyzeError.error || "Failed to analyze resume");
+      }
+
+      const analyzeData = await analyzeRes.json();
+
+      const generateRes = await fetch("/api/generate-pitch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resumeText: analyzeData.text,
+          targetSeconds: pitchLength,
+          targetRole: targetRole.trim() || undefined,
+        }),
+      });
+
+      if (!generateRes.ok) {
+        const generateError = await generateRes.json();
+        throw new Error(generateError.error || "Failed to generate pitch");
+      }
+
+      const pitchData = await generateRes.json();
+      setGeneratedPitch(pitchData.pitch);
+      setOriginalPitchLength(pitchLength);
+
+    } catch {
+      setError("Failed to generate pitch. Please try again.");
+    } finally {
+      setIsGeneratingPitch(false);
+    }
+  }
+
+  async function handlePitchLengthChange(newLength: number) {
+    if (!generatedPitch || newLength === originalPitchLength) return;
+
+    try {
+      setIsAdjustingPitch(true);
+      setError(null);
+
+      const res = await fetch("/api/adjust-pitch-length", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPitch: generatedPitch,
+          targetSeconds: newLength,
+          originalTargetSeconds: originalPitchLength,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to adjust pitch length");
+      }
+
+      const data = await res.json();
+      setGeneratedPitch(data.pitch);
+      setPitchLength(newLength);
+
+    } catch {
+      setError("Failed to adjust pitch length. Please try again.");
+    } finally {
+      setIsAdjustingPitch(false);
+    }
+  }
+
+  function handlePracticeGenerated() {
+    // Copy generated pitch to clipboard for easy practice
+    if (generatedPitch) {
+      navigator.clipboard.writeText(generatedPitch);
+      toast.success("Pitch copied! Practice and record when ready.");
+    }
+  }
+
   // Extract CTA from polished script
   const extractCTA = (script: string) => {
     const sentences = script.split(/[.!?]+/).filter(s => s.trim());
@@ -256,11 +355,86 @@ export default function Page() {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Recording Section */}
+              {/* Resume Upload Section */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35 }}
+              >
+                <Card className="premium-card">
+                  <CardHeader>
+                    <CardTitle className="font-heading">Generate from Resume</CardTitle>
+                    <CardDescription>
+                      Upload your resume to create a personalized elevator pitch
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid gap-4">
+                      <ResumeUploader
+                        onFileSelect={setResumeFile}
+                        selectedFile={resumeFile}
+                      />
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label htmlFor="targetRole" className="block text-sm font-medium mb-2">
+                            Target Role (Optional)
+                          </label>
+                          <input
+                            id="targetRole"
+                            type="text"
+                            value={targetRole}
+                            onChange={(e) => setTargetRole(e.target.value)}
+                            placeholder="e.g., Senior Data Scientist"
+                            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Pitch Length: {pitchLength}s
+                          </label>
+                          <PitchLengthSlider
+                            value={pitchLength}
+                            onChange={setPitchLength}
+                            disabled={isGeneratingPitch || isAdjustingPitch}
+                          />
+                        </div>
+                      </div>
+                      
+                      <Button
+                        onClick={handleGeneratePitch}
+                        disabled={!resumeFile || isGeneratingPitch}
+                        className="w-full md:w-auto"
+                      >
+                        {isGeneratingPitch ? "Generating..." : "Generate Pitch"}
+                      </Button>
+                    </div>
+                    
+                    {generatedPitch && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.25 }}
+                      >
+                        <GeneratedPitch
+                          pitch={generatedPitch}
+                          pitchLength={pitchLength}
+                          onLengthChange={handlePitchLengthChange}
+                          onPractice={handlePracticeGenerated}
+                          isAdjusting={isAdjustingPitch}
+                        />
+                      </motion.div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Recording Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: 0.1 }}
               >
                 <Card className="premium-card">
                   <CardHeader>
