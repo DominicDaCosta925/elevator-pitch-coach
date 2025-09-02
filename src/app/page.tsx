@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import Recorder from "@/components/Recorder";
 import ScoreCard from "@/components/ScoreCard";
@@ -342,121 +343,145 @@ export default function Page() {
         
         {/* Header */}
         <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40">
-          <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="max-w-[1100px] mx-auto px-6 md:px-8 h-16 flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-heading font-semibold">Elevator Pitch Coach</h1>
-              <p className="text-sm text-muted-foreground">AI-powered practice & feedback</p>
+              <h1 className="text-3xl font-semibold tracking-[-0.01em] font-heading">Elevator Pitch Coach</h1>
+              <p className="text-sm text-muted-foreground">Fast, warm, surgical coaching</p>
             </div>
             <ThemeToggle />
           </div>
         </header>
 
-        <div className="container mx-auto px-4 py-8">
-          <div className="grid lg:grid-cols-3 gap-8">
+        <div className="max-w-[1100px] mx-auto px-6 md:px-8 my-8 md:my-10">
+          <div className="grid lg:grid-cols-3 gap-8 md:gap-10">
             {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 flex flex-col gap-8 md:gap-10">
               {/* Resume Upload Section */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
               >
-                <Card className="premium-card">
+                <Card className="rounded-2xl p-6 md:p-7 shadow-[0_6px_24px_rgba(0,0,0,0.08)]">
                   <CardHeader>
-                    <CardTitle className="font-heading">Generate from Resume</CardTitle>
+                    <CardTitle className="font-heading text-2xl font-medium">Upload Your Resume</CardTitle>
                     <CardDescription>
-                      Upload your resume to create a personalized elevator pitch
+                      Drag & drop or click to browse (PDF, DOCX, TXT · up to 10MB)
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid gap-4">
-                      <ResumeUploader
-                        onFileSelect={setResumeFile}
-                        selectedFile={resumeFile}
-                      />
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label htmlFor="targetRole" className="block text-sm font-medium mb-2">
-                            Target Role (Optional)
-                          </label>
-                          <input
-                            id="targetRole"
-                            type="text"
-                            value={targetRole}
-                            onChange={(e) => setTargetRole(e.target.value)}
-                            placeholder="e.g., Senior Data Scientist"
-                            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium mb-2">
-                            Pitch Length: {pitchLength}s
-                          </label>
-                          <PitchLengthSlider
-                            value={pitchLength}
-                            onChange={setPitchLength}
-                            disabled={isGeneratingPitch || isAdjustingPitch}
-                          />
-                        </div>
-                      </div>
-                      
-                      <Button
-                        onClick={handleGeneratePitch}
-                        disabled={!resumeFile || isGeneratingPitch}
-                        className="w-full md:w-auto"
-                      >
-                        {isGeneratingPitch ? "Generating..." : "Generate Pitch"}
-                      </Button>
-                    </div>
-                    
-                    {generatedPitch && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.25 }}
-                      >
-                        <GeneratedPitch
-                          pitch={generatedPitch}
-                          pitchLength={pitchLength}
-                          onLengthChange={handlePitchLengthChange}
-                          onPractice={handlePracticeGenerated}
-                          isAdjusting={isAdjustingPitch}
-                        />
-                      </motion.div>
+                  <CardContent className="space-y-4">
+                    <ResumeUploader onFileSelect={setResumeFile} selectedFile={resumeFile} />
+                    {resumeFile && (
+                      <p className="text-sm text-muted-foreground">Selected: {resumeFile.name} · {(resumeFile.size / 1024).toFixed(0)} KB</p>
                     )}
                   </CardContent>
                 </Card>
               </motion.div>
 
-              {/* Recording Section */}
+              {/* Pitch Settings */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: 0.1 }}
+                transition={{ duration: 0.35, ease: "easeOut", delay: 0.07 }}
               >
-                <Card className="premium-card">
+                <Card className="rounded-2xl p-6 md:p-7 shadow-[0_6px_24px_rgba(0,0,0,0.08)]">
                   <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="font-heading">Record Your Pitch</CardTitle>
-                        <CardDescription>
-                          Practice your elevator pitch and get instant AI feedback
-                        </CardDescription>
-                      </div>
-                      <SegmentedToggle value={isDeepMode} onChange={setIsDeepMode} />
-                    </div>
+                    <CardTitle className="font-heading text-2xl font-semibold pt-1">Pitch Settings</CardTitle>
+                    <CardDescription className="text-sm text-muted-foreground max-w-prose">
+                      Choose your target role, ideal length, and coaching depth.
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="targetRole" className="block text-sm font-medium mb-2">Target Role (Optional)</label>
+                        <input
+                          id="targetRole"
+                          type="text"
+                          value={targetRole}
+                          onChange={(e) => setTargetRole(e.target.value)}
+                          placeholder="e.g., Senior Data Scientist"
+                          className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium">Pitch Length: {pitchLength}s</label>
+                        <PitchLengthSlider
+                          value={pitchLength}
+                          onChange={setPitchLength}
+                          disabled={isGeneratingPitch || isAdjustingPitch}
+                        />
+                        <div className="flex items-center gap-2">
+                          {[20,30,45].map((p)=> (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={()=> setPitchLength(p)}
+                              aria-pressed={pitchLength===p}
+                              className={`px-3 py-1.5 rounded-md text-sm border transition ${pitchLength===p ? 'bg-[#2563EB] text-white border-transparent' : 'border-border hover:bg-accent'}`}
+                            >
+                              {p===20? '20s Quick' : p===30? '30s Balanced' : '45s Detailed'}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-sm text-muted-foreground max-w-prose">
+                          Estimated length: ~{Math.round(pitchLength*2.5*0.9)}–{Math.round(pitchLength*2.5*1.1)} words
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium">Depth</span>
+                        <ToggleGroup type="single" value={isDeepMode ? 'deep' : 'brief'} onValueChange={(v)=> v && setIsDeepMode(v==='deep')}>
+                          <ToggleGroupItem value="brief">Brief</ToggleGroupItem>
+                          <ToggleGroupItem value="deep">Deep</ToggleGroupItem>
+                        </ToggleGroup>
+                      </div>
+
+                      <Button
+                        onClick={handleGeneratePitch}
+                        disabled={!resumeFile || isGeneratingPitch}
+                        className="w-full md:w-auto bg-[#2563EB] text-white hover:bg-[#1e4fd3] focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2"
+                      >
+                        {isGeneratingPitch ? (
+                          <span className="inline-flex items-center gap-2"><svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>Generating…</span>
+                        ) : (
+                          "Generate pitch"
+                        )}
+                      </Button>
+                    </div>
+                    {loading && (
+                      <Progress value={undefined} />
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Practice & Results */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut", delay: 0.08 }}
+              >
+                <Card className="rounded-2xl p-6 md:p-7 shadow-[0_6px_24px_rgba(0,0,0,0.08)]">
+                  <CardHeader>
+                    <CardTitle className="font-heading text-2xl font-semibold pt-1">Practice & Results</CardTitle>
+                    <CardDescription className="text-sm text-muted-foreground max-w-prose">
+                      Practice your elevator pitch and get instant AI feedback
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Recording Controls */}
                     <div className="flex flex-col items-center space-y-4">
                       <Recorder onRecorded={handleRecorded} />
-                      {error && (
-                        <div className="w-full p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
-                          {error}
-                        </div>
-                      )}
                     </div>
+
+                    {error && (
+                      <div className="w-full p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+                        {error}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -482,11 +507,34 @@ export default function Page() {
                   )}
 
                   {/* Polished Script */}
+                  {generatedPitch && (
+                    <div className="mt-6 p-4 bg-card border border-border rounded-xl">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-lg font-medium">Generated Pitch</h3>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(generatedPitch);
+                            toast.success("Pitch copied! Practice and record when ready.");
+                          }}
+                          className="gap-2"
+                        >
+                          <Copy className="h-4 w-4" />
+                          Copy
+                        </Button>
+                      </div>
+                      <div className="text-base leading-relaxed select-text whitespace-pre-line">
+                        {generatedPitch}
+                      </div>
+                    </div>
+                  )}
+
                   {coach?.polishedScript && (
-                    <Card className="premium-card">
+                    <Card className="rounded-2xl p-6 md:p-7 shadow-[0_6px_24px_rgba(0,0,0,0.08)]">
                       <CardHeader>
                         <div className="flex items-center justify-between">
-                          <CardTitle className="font-heading">Polished Script</CardTitle>
+                          <CardTitle className="font-heading text-2xl font-medium">Polished Script</CardTitle>
                           <Button
                             variant="outline"
                             size="sm"
@@ -503,7 +551,7 @@ export default function Page() {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="text-sm leading-relaxed">
+                        <div className="text-base leading-relaxed select-text whitespace-pre-line">
                           {renderPolishedScript(coach.polishedScript)}
                         </div>
                       </CardContent>
