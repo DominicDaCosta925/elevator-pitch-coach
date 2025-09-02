@@ -8,13 +8,13 @@ import ScoreCard from "@/components/ScoreCard";
 import EnhancedScoreCard from "@/components/EnhancedScoreCard";
 import { QuoteUpgrades } from "@/components/QuoteUpgrades";
 import { DirectQuotes } from "@/components/DirectQuotes";
-import ResumeUploader from "@/components/ResumeUploader";
+// import ResumeUploader from "@/components/ResumeUploader";
 import PitchLengthSlider from "@/components/PitchLengthSlider";
 import GeneratedPitch from "@/components/GeneratedPitch";
 import { computeMetrics } from "@/lib/metrics";
-import { createRecorder, type RecordingResult } from "@/utils/recorder";
+// import { createRecorder, type RecordingResult } from "@/utils/recorder";
 import type { CoachingResponse, Metrics } from "@/lib/types";
-import { validateCoachingResponse } from "@/lib/coaching-schema";
+// import { validateCoachingResponse } from "@/lib/coaching-schema";
 
 const ThemeToggle = () => {
   const { theme, setTheme } = useTheme();
@@ -109,7 +109,7 @@ export default function Page() {
       });
       const cJson = await cRes.json();
       setCoach(cJson);
-    } catch (err) {
+    } catch {
       setError("Something went wrong while processing your recording. Please try again.");
     } finally {
       setLoading(false);
@@ -157,7 +157,7 @@ export default function Page() {
       setGeneratedPitch(pitchData.pitch);
       setOriginalPitchLength(pitchLength);
 
-    } catch (err) {
+    } catch {
       setError(err instanceof Error ? err.message : "Failed to generate pitch. Please try again.");
     } finally {
       setIsGeneratingPitch(false);
@@ -189,7 +189,7 @@ export default function Page() {
       setGeneratedPitch(adjustData.pitch);
       setOriginalPitchLength(newLength);
 
-    } catch (err) {
+    } catch {
       setError("Failed to adjust pitch length. Please try again.");
     } finally {
       setIsAdjustingPitch(false);
@@ -205,7 +205,7 @@ export default function Page() {
       await navigator.clipboard.writeText(text);
       setCopiedScript(true);
       setTimeout(() => setCopiedScript(false), 2000);
-    } catch (err) {
+    } catch {
       // Fallback for browsers that don't support clipboard API
       const textArea = document.createElement('textarea');
       textArea.value = text;

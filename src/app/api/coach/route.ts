@@ -34,6 +34,7 @@ OUTPUT STRUCTURE:
   "nextSteps": [string] (3-5)
 }`;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const JSON_SCHEMA_DEEP = {
   type: "object",
   properties: {
@@ -214,7 +215,7 @@ function synthesizeDeepTips(currentTips: string[], transcript: string, metrics: 
   const dollarMatch = transcript.match(/(\$\d+[KMB]?)/i);
   if ((percentMatch || dollarMatch) && !tips.some(t => t.includes('$') || t.includes('%'))) {
     const metric = percentMatch?.[1] || dollarMatch?.[1];
-    const metricContext = directQuotes.find(q => q.includes(metric)) || 
+    const metricContext = directQuotes.find(q => q.includes(metric || '')) || 
                          transcript.match(new RegExp(`[^.]*${metric?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^.]*`, 'i'))?.[0]?.trim();
     if (metricContext) {
       tips.push(`You mentioned "${metricContext}" — quantify the business impact: "${metric} ≈ $X this quarter using your run-rate" or "${metric} = Y efficiency hours saved"`);
@@ -376,30 +377,30 @@ function trimScriptToLength(script: string, targetSeconds: number): string {
   return trimmed;
 }
 
-function trimToBriefCompliance(fullResponse: any, transcript: string, metrics: Metrics): any {
+function trimToBriefCompliance(fullResponse: any, transcript: string, _metrics: Metrics): any {
   console.log(`Brief compliance trim: ${fullResponse.directQuotes?.length || 0} quotes, ${fullResponse.lineEdits?.length || 0} edits, ${fullResponse.coachingTips?.length || 0} tips`);
   
   // 1. Trim directQuotes to ≤2 (prioritize metrics/business levers)
-  let quotes = fullResponse.directQuotes || [];
+  const quotes = fullResponse.directQuotes || [];
   const metricQuote = quotes.find((q: string) => /(\d+%|\$\d+|\d+[KMB]|revenue|sales|efficiency|conversion|activation)/i.test(q));
   const businessQuote = quotes.find((q: string) => q !== metricQuote && /business|impact|growth|value|ROI|profit/i.test(q));
   
-  const trimmedQuotes = [];
+  const trimmedQuotes: string[] = [];
   if (metricQuote) trimmedQuotes.push(metricQuote);
   if (businessQuote && trimmedQuotes.length < 2) trimmedQuotes.push(businessQuote);
   
   // Fill remaining slots with most actionable quotes
-  quotes.filter(q => !trimmedQuotes.includes(q)).slice(0, 2 - trimmedQuotes.length).forEach(q => trimmedQuotes.push(q));
+  quotes.filter((q: string) => !trimmedQuotes.includes(q)).slice(0, 2 - trimmedQuotes.length).forEach((q: string) => trimmedQuotes.push(q));
   
   // 2. Trim lineEdits to exactly 2 (prioritize cadence + power-verb)
-  let edits = fullResponse.lineEdits || [];
+  const edits = fullResponse.lineEdits || [];
   const cadenceEdit = edits.find((e: any) => /shorten|tight|pause|breath|trim|syllable/i.test(e.why));
   const powerVerbEdit = edits.find((e: any) => 
     /drove|led|shipped|launched|delivered|created|scaled|reduced/i.test(e.upgrade) || 
     /verbs.*drove|verbs.*led|verbs.*delivered|verbs.*stronger/i.test(e.why)
   );
   
-  const trimmedEdits = [];
+  const trimmedEdits: any[] = [];
   if (cadenceEdit) trimmedEdits.push(cadenceEdit);
   if (powerVerbEdit && powerVerbEdit !== cadenceEdit && trimmedEdits.length < 2) {
     trimmedEdits.push(powerVerbEdit);
@@ -407,14 +408,14 @@ function trimToBriefCompliance(fullResponse: any, transcript: string, metrics: M
   
   // Fill remaining slots with impactful edits (%/$, ROI, conversion)
   if (trimmedEdits.length < 2) {
-    const impactEdits = edits.filter(e => !trimmedEdits.includes(e) && 
+    const impactEdits = edits.filter((e: any) => !trimmedEdits.includes(e) && 
       /ROI|impact|revenue|\$|%|conversion|activation/i.test(e.why || e.upgrade));
-    impactEdits.slice(0, 2 - trimmedEdits.length).forEach(e => trimmedEdits.push(e));
+    impactEdits.slice(0, 2 - trimmedEdits.length).forEach((e: any) => trimmedEdits.push(e));
   }
   
   // Final fallback: use first available edits
   while (trimmedEdits.length < 2 && edits.length > trimmedEdits.length) {
-    const nextEdit = edits.find(e => !trimmedEdits.includes(e));
+    const nextEdit = edits.find((e: any) => !trimmedEdits.includes(e));
     if (nextEdit) trimmedEdits.push(nextEdit);
   }
   
@@ -425,9 +426,9 @@ function trimToBriefCompliance(fullResponse: any, transcript: string, metrics: M
     const percentMatch = transcript.match(/(\d+%)/i);
     const weakVerbMatch = transcript.match(/\b(I\s+(?:helped|like|worked))\b/i);
     
-    if (percentMatch && !tips.some(t => t.includes('%'))) {
+    if (percentMatch && !tips.some((t: string) => t.includes('%'))) {
       tips.push(`You mentioned "${percentMatch[1]}" — convert to business impact: "${percentMatch[1]} = $X revenue this quarter"`);
-    } else if (weakVerbMatch && !tips.some(t => t.includes(weakVerbMatch[1]))) {
+    } else if (weakVerbMatch && !tips.some((t: string) => t.includes(weakVerbMatch[1]))) {
       const phrase = weakVerbMatch[1];
       const strongVerb = phrase.includes('helped') ? 'I drove' : phrase.includes('like') ? 'I lead' : 'I built';
       tips.push(`Replace "${phrase}" with "${strongVerb}" — own your transformational role`);
@@ -438,13 +439,13 @@ function trimToBriefCompliance(fullResponse: any, transcript: string, metrics: M
     // Keep the 3 most transcript-anchored tips
     const transcriptTerms = transcript.toLowerCase().split(/\s+/);
     tips = tips
-      .map(tip => ({
+      .map((tip: string) => ({
         tip,
         anchored: transcriptTerms.some(term => tip.toLowerCase().includes(term) && term.length > 3)
       }))
-      .sort((a, b) => b.anchored ? 1 : -1)
+      .sort((a: any, b: any) => b.anchored ? 1 : -1)
       .slice(0, 3)
-      .map(item => item.tip);
+      .map((item: any) => item.tip);
   }
   
   const briefResponse = {
@@ -478,6 +479,7 @@ function truncateTranscriptSafely(transcript: string, maxTokens = 400): { text: 
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function generateCoachingFast(
   transcript: string, 
   metrics: Metrics, 
@@ -551,38 +553,7 @@ async function generateCoachingWithRetry(
   depth: "brief" | "deep"
 ): Promise<ValidatedCoachingResponse> {
   
-  let systemPrompt = `You are Dr. Alexandra Sterling, a world-renowned executive coach who sees potential others miss and transforms careers through breakthrough moments.
-
-YOUR SIGNATURE APPROACH:
-- Listen deeply, quote their exact words, then reveal the bigger story they're telling
-- ${firstName ? `Call them ${firstName} once` : 'Use their name if mentioned'} to show personal investment  
-- Mirror their energy first, then elevate it strategically
-- Create that "wait, I could actually go for that role?" transformation
-- Be warm but direct - like a mentor who believes in them completely
-
-YOUR COACHING SUPERPOWERS:
-1. DEEP LISTENING: Quote 3+ exact phrases, especially any numbers/metrics they mention
-2. SURGICAL UPGRADES: Give 3+ specific before→after edits that transform weak language into executive presence
-3. STRATEGIC REFRAMING: Help them see themselves as the market will with proper positioning
-4. BREAKTHROUGH INSIGHTS: One "aha" moment that shifts how they view their career trajectory
-
-REQUIRED EDIT TYPES (in your 3+ lineEdits):
-- Cadence edit: Remove filler words, tighten redundancy 
-- Power-verb edit: Transform passive helpers into active drivers
-- ROI edit: Shift from feature-talk to business impact language
-
-SCORING PHILOSOPHY:
-- Most professionals deserve 6-7 scores with specific growth areas
-- Reserve 8+ for truly polished executives  
-- Your job is honest assessment + transformation roadmap
-
-TONE EXAMPLES:
-- "${firstName ? firstName + ', ' : ''}I heard you say '[quote]' but what I'm really hearing is [much bigger opportunity]"
-- "You're playing it safe when you say '[quote]' - but your results tell a different story"
-- "Here's what hiring managers will miss if you position yourself this way..."
-- Show genuine excitement: "This is actually your secret weapon because..."
-
-Return only valid JSON with all required fields. Be specific, warm, and transformational.`;
+  // Using SYSTEM_PROMPT_COMPACT for optimized performance
 
   const userPrompt = `TRANSCRIPT: "${transcript}"
 METRICS: ${metrics.durationSec}s, ${metrics.wordsPerMinute}wpm, ${metrics.fillerCount} fillers, readability ${metrics.readability}
@@ -617,7 +588,7 @@ Coach with: 3+ exact quotes (include metrics), 3+ line edits (cadence+power-verb
       };
 
       // Trim to appropriate mode
-      const modeResponse = trimToBriefMode(withRubric, transcript, metrics, depth);
+      const modeResponse = depth === "brief" ? trimToBriefCompliance(withRubric, transcript, metrics) : withRubric;
 
       // Validate against appropriate schema
       const validated = validateCoachingResponse(modeResponse, depth);
@@ -826,7 +797,7 @@ export async function POST(req: Request) {
           timings.llmMs = performance.now() - retryStart;
           meta.model = "gpt-4o-mini";
           meta.retried = true;
-        } catch (retryError) {
+        } catch {
           console.error("Coaching API: Retry failed, using mock fallback");
           const mockStart = performance.now();
           deepResponse = createEnhancedMockResponse(transcript, targetRole, metrics, "deep");
@@ -871,7 +842,7 @@ export async function POST(req: Request) {
     let mirrorBack = finalResponse.mirrorBack || "";
     mirrorBack = mirrorBack.replace(/\bsomeone\b/gi, 'you');
     if (firstName && !mirrorBack.toLowerCase().includes(firstName.toLowerCase())) {
-      mirrorBack = `${firstName}, ${mirrorBack.replace(/^[A-Z]/, (c) => c.toLowerCase())}`;
+      mirrorBack = `${firstName}, ${mirrorBack.replace(/^[A-Z]/, (c: string) => c.toLowerCase())}`;
     }
     
     timings.postProcessMs = performance.now() - postProcessStart;

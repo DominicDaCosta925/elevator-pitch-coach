@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     // Calculate target word count
     const targetWords = Math.round((targetSeconds / 60) * 150);
-    const currentWords = currentPitch.split(/\s+/).length;
+    // const currentWords = currentPitch.split(/\s+/).length;
 
     let instruction = "";
     if (targetSeconds > (originalTargetSeconds || 30)) {

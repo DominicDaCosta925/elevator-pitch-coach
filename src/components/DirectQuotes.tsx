@@ -21,7 +21,7 @@ export function DirectQuotes({ quotes }: DirectQuotesProps) {
             className="border-l-4 border-primary/30 pl-4 py-2 bg-muted/30 rounded-r-lg"
           >
             <p className="text-muted-foreground italic claude-text">
-              "{quote}"
+              &ldquo;{quote}&rdquo;
             </p>
           </blockquote>
         ))}

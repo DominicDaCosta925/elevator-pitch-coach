@@ -11,12 +11,12 @@ export function QuoteUpgrades({ edits }: { edits: LineEdit[] }) {
       {edits.map((e, i) => (
         <div key={i} className="rounded-2xl border border-border bg-card p-4 transition-colors">
           <div className="text-sm font-semibold mb-3 text-muted-foreground">
-            What you said → Coach's upgrade
+            What you said → Coach&apos;s upgrade
           </div>
           <div className="space-y-2">
             <div className="p-3 rounded-lg bg-muted/50">
               <span className="font-medium text-sm text-muted-foreground">You:</span>
-              <p className="text-sm mt-1 italic">"{e.quote}"</p>
+              <p className="text-sm mt-1 italic">&ldquo;{e.quote}&rdquo;</p>
             </div>
             <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
               <span className="font-medium text-sm text-primary">Upgrade:</span>

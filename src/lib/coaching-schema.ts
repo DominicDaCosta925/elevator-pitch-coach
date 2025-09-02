@@ -58,9 +58,6 @@ export const BriefCoachingSchema = BaseCoachingSchema.extend({
     { message: "polishedScript must end with a CTA" }
   ),
   // Brief mode omits aboutRewrite and nextSteps
-}).omit({ 
-  aboutRewrite: true, 
-  nextSteps: true 
 });
 
 // Deep-dive mode schema (comprehensive)  

@@ -121,7 +121,7 @@ export default function ScoreCard({ m }: { m: Metrics }) {
         "needs-improvement": m.durationSec < 25 
           ? "Try to expand your pitch with more details about your experience"
           : "Practice condensing your message to the most impactful points",
-        good: "You're close to the sweet spot! Fine-tune your timing with practice",
+        good: "You&apos;re close to the sweet spot! Fine-tune your timing with practice",
         excellent: "Perfect timing! This length keeps listeners engaged",
       },
       wpm: {
@@ -132,7 +132,7 @@ export default function ScoreCard({ m }: { m: Metrics }) {
         excellent: "Ideal speaking pace for maximum clarity and engagement",
       },
       filler: {
-        "needs-improvement": "Practice pausing instead of using filler words like 'um', 'uh', 'like'",
+        "needs-improvement": "Practice pausing instead of using filler words like &apos;um&apos;, &apos;uh&apos;, &apos;like&apos;",
         good: "Good control! Continue being mindful of filler words",
         excellent: "Excellent fluency! Your speech sounds polished and professional",
       },
@@ -233,7 +233,7 @@ export default function ScoreCard({ m }: { m: Metrics }) {
           </div>
           <p className="text-muted-foreground text-sm">
             {[timeStatus, wpmStatus, fillerStatus, readabilityStatus].filter(s => s === "excellent").length >= 3
-              ? "Excellent pitch! You're hitting most of the key metrics."
+              ? "Excellent pitch! You&apos;re hitting most of the key metrics."
               : [timeStatus, wpmStatus, fillerStatus, readabilityStatus].filter(s => s !== "needs-improvement").length >= 3
               ? "Good pitch! A few small improvements will make it even better."
               : "Good foundation! Focus on the areas marked for improvement."}
