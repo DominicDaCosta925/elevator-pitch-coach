@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${manrope.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${manrope.variable} dark`}>
       <head>
         {/* Preload critical fonts */}
         <link

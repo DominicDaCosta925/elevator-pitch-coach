@@ -48,6 +48,15 @@ const ThemeToggle = () => {
 };
 
 export default function ElevatorPitchCoach() {
+  // TEST: Confirming this is the active route
+  console.log("🔥 FIGMA UI LOADING - src/app/page.tsx is active");
+  
+  React.useEffect(() => {
+    console.log("🎨 CSS Variables Check:");
+    console.log("--background:", getComputedStyle(document.documentElement).getPropertyValue('--background'));
+    console.log("--primary:", getComputedStyle(document.documentElement).getPropertyValue('--primary'));
+    console.log("--accent:", getComputedStyle(document.documentElement).getPropertyValue('--accent'));
+  }, []);
   // File & Generation State
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [generatedPitch, setGeneratedPitch] = useState<string>("");
@@ -285,6 +294,14 @@ export default function ElevatorPitchCoach() {
 
       {/* Main Content */}
       <main className="mx-auto max-w-screen-2xl w-full px-4 sm:px-6 lg:px-8 py-8">
+        {/* TEST: Visual confirmation of Figma tokens */}
+        <div className="mb-4 p-4 bg-primary text-primary-foreground rounded-lg">
+          <p className="text-sm">🎨 FIGMA TEST: Primary (#006d5b) should be dark green, accent (#ffa071) should be orange</p>
+          <div className="mt-2 p-2 bg-accent text-accent-foreground rounded">
+            Accent color test - should be orange background with green text
+          </div>
+        </div>
+
         {/* Error Banner */}
         {error && (
           <motion.div

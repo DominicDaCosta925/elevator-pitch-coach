@@ -64,7 +64,7 @@ export function ResumeUploadCard({ onFileSelect, selectedFile, isProcessing = fa
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: "easeOut" }}
-      className="bg-card border border-border rounded-2xl p-6"
+      className="bg-card text-card-foreground border border-border rounded-2xl p-6"
     >
       <div className="mb-4">
         <h2 className="text-xl font-heading font-semibold h-heading text-card-foreground mb-2">
