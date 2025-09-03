@@ -4,19 +4,14 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-// Figma design tokens: Manrope for headings, Inter for body
 const inter = Inter({ 
-  subsets: ["latin"],
-  variable: "--font-body",
-  weight: ["400", "500", "600", "700"],
-  display: 'swap',
+  subsets: ["latin"], 
+  variable: "--font-body" 
 });
 
-const manrope = Manrope({
-  subsets: ["latin"],
-  variable: "--font-heading",
-  weight: ["400", "500", "600", "700", "800"],
-  display: 'swap',
+const manrope = Manrope({ 
+  subsets: ["latin"], 
+  variable: "--font-heading" 
 });
 
 export const metadata: Metadata = {
@@ -33,21 +28,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${manrope.variable} dark`}>
-      <head>
-        {/* Preload critical fonts */}
-        <link
-          rel="preload"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-          as="style"
-        />
-        <link
-          rel="preload" 
-          href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
-          as="style"
-        />
-      </head>
-      <body className={`${inter.variable} ${manrope.variable} antialiased font-body`}>
+    <html lang="en" className={`${inter.variable} ${manrope.variable} dark`}>
+      <body className="bg-background text-foreground">
         <ThemeProvider 
           attribute="class" 
           defaultTheme="dark" 

@@ -3,6 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Copy, Check } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import type { CoachingResponse } from "@/lib/types";
 
 interface ResultsCardProps {
@@ -63,7 +64,7 @@ export function ResultsCard({ coaching, polishedScript, onCopy, isCopied }: Resu
             No Results Yet
           </h3>
           <p className="text-sm text-muted-foreground">
-            Practice your pitch to see AI coaching feedback and improvements
+            <span className="cta-highlight">Practice your pitch to see AI coaching feedback and improvements</span>
           </p>
         </div>
       </motion.div>

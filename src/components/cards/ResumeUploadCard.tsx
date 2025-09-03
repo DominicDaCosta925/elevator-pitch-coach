@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Upload, FileText, File, X } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
 interface ResumeUploadCardProps {
   onFileSelect: (file: File) => void;
@@ -64,16 +65,15 @@ export function ResumeUploadCard({ onFileSelect, selectedFile, isProcessing = fa
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: "easeOut" }}
-      className="bg-card text-card-foreground border border-border rounded-2xl p-6"
     >
-      <div className="mb-4">
-        <h2 className="text-xl font-heading font-semibold h-heading text-card-foreground mb-2">
-          Upload Resume
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Upload your resume to generate a personalized elevator pitch
-        </p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Upload Resume</CardTitle>
+          <CardDescription>
+            Upload your resume to generate a personalized elevator pitch
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
 
       {selectedFile ? (
         <div className="border border-primary/20 rounded-lg p-4 bg-primary/5">
@@ -142,6 +142,8 @@ export function ResumeUploadCard({ onFileSelect, selectedFile, isProcessing = fa
           </p>
         </motion.div>
       )}
+        </CardContent>
+      </Card>
     </motion.div>
   );
 }

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
 interface PitchSettingsCardProps {
   selectedDuration: 30 | 60 | 90;
@@ -42,16 +43,15 @@ export function PitchSettingsCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: "easeOut", delay: 0.1 }}
-      className="bg-card text-card-foreground border border-border rounded-2xl p-6"
     >
-      <div className="mb-6">
-        <h2 className="text-xl font-heading font-semibold h-heading text-card-foreground mb-2">
-          Pitch Settings
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Customize your elevator pitch preferences
-        </p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Pitch Settings</CardTitle>
+          <CardDescription>
+            Customize your elevator pitch preferences
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
 
       <div className="space-y-6">
         {/* Target Role Input */}
@@ -74,21 +74,20 @@ export function PitchSettingsCard({
           <label className="block text-sm font-medium text-card-foreground mb-3">
             Pitch Length
           </label>
-          <div className="flex gap-2">
+          <div className="grid gap-2 sm:grid-cols-3">
             {durations.map((duration) => (
               <button
                 key={duration.value}
                 onClick={() => onDurationChange(duration.value)}
                 className={`
-                  flex-1 px-4 py-3 rounded-lg border transition-all duration-200 text-center outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background
+                  h-10 rounded-[var(--radius)] border border-border transition-colors text-center outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background
                   ${selectedDuration === duration.value
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'border-border bg-transparent text-foreground hover:bg-secondary'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-secondary'
                   }
                 `}
               >
-                <div className="font-medium text-sm">{duration.label}</div>
-                <div className="text-xs opacity-75">{duration.sublabel}</div>
+                {duration.label} — {duration.value}s
               </button>
             ))}
           </div>
@@ -147,7 +146,8 @@ export function PitchSettingsCard({
             Upload a resume to enable pitch generation
           </p>
         )}
-      </div>
+        </CardContent>
+      </Card>
     </motion.div>
   );
 }
