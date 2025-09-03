@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Manrope } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
@@ -19,7 +19,15 @@ export const metadata: Metadata = {
   description: "Practice and perfect your elevator pitch with AI-powered feedback. Generate personalized pitches from your resume and improve with real-time coaching.",
   keywords: ["elevator pitch", "AI coaching", "interview practice", "presentation skills", "resume"],
   authors: [{ name: "Elevator Pitch Coach" }],
-  viewport: "width=device-width, initial-scale=1",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#1e1e1e" },
+    { color: "#ffffff" },
+  ],
 };
 
 export default function RootLayout({
@@ -28,12 +36,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${manrope.variable} dark`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${manrope.variable} dark`}>
       <body className="bg-background text-foreground">
         <ThemeProvider 
           attribute="class" 
           defaultTheme="dark" 
-          enableSystem
+          enableSystem={false}
           disableTransitionOnChange
         >
           {children}
