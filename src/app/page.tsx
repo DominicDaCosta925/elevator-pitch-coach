@@ -273,7 +273,7 @@ export default function ElevatorPitchCoach() {
         <div className="mx-auto max-w-screen-2xl w-full px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div>
-              <h1 className="text-2xl font-heading font-bold h-heading text-foreground">
+              <h1 className="text-2xl font-heading font-bold h-heading text-foreground" data-test="heading">
                 Elevator Pitch Coach
               </h1>
               <p className="text-sm text-muted-foreground">

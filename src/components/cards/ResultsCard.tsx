@@ -55,6 +55,7 @@ export function ResultsCard({ coaching, polishedScript, onCopy, isCopied }: Resu
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.28, ease: "easeOut", delay: 0.3 }}
         className="bg-card text-card-foreground border border-border rounded-2xl p-6"
+        data-test="card"
       >
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
@@ -77,6 +78,7 @@ export function ResultsCard({ coaching, polishedScript, onCopy, isCopied }: Resu
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: "easeOut", delay: 0.3 }}
       className="bg-card text-card-foreground border border-border rounded-2xl p-6"
+      data-test="card"
     >
       <div className="mb-6">
         <div className="flex items-center justify-between">

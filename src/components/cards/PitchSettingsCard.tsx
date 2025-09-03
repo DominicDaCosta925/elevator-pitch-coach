@@ -44,7 +44,7 @@ export function PitchSettingsCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: "easeOut", delay: 0.1 }}
     >
-      <Card>
+      <Card data-test="card">
         <CardHeader>
           <CardTitle>Pitch Settings</CardTitle>
           <CardDescription>

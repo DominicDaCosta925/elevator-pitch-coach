@@ -3,7 +3,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, Copy, Clock, FileText, Sparkles, Loader2, Check, AlertCircle } from "lucide-react";
-import PitchLengthSlider from "./PitchLengthSlider";
+
 
 interface GeneratedPitchProps {
   pitch: string;
@@ -185,19 +185,7 @@ export default function GeneratedPitch({
         </div>
       </motion.div>
 
-      {/* Length Adjustment Slider */}
-      {onLengthChange && currentLength && onLengthUpdate && (
-        <div className="space-y-4">
-          <h4 className="font-medium">Adjust Pitch Length</h4>
-          <PitchLengthSlider
-            value={currentLength}
-            onChange={onLengthUpdate}
-            onChangeComplete={onLengthChange}
-            disabled={isAdjusting}
-            isUpdating={isAdjusting}
-          />
-        </div>
-      )}
+
 
       {/* Stats and Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

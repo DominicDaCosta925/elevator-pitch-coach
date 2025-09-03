@@ -66,7 +66,7 @@ export function ResumeUploadCard({ onFileSelect, selectedFile, isProcessing = fa
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: "easeOut" }}
     >
-      <Card>
+      <Card data-test="card">
         <CardHeader>
           <CardTitle>Upload Resume</CardTitle>
           <CardDescription>
