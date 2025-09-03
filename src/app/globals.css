@@ -9,46 +9,57 @@
   color-scheme: light dark;
 
   /* LIGHT (HSL triplets) */
-  --background: 0 0% 100%;
-  --foreground: 0 0% 10%;
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 10%;
-  --primary: 170 100% 21%;     /* #006d5b */
+  --background: 0 0% 100%;       /* #ffffff */
+  --foreground: 0 0% 10%;        /* #1a1a1a */
+  --card: 0 0% 100%;             /* #ffffff */
+  --card-foreground: 0 0% 10%;   /* #1a1a1a */
+
+  --primary: 170 100% 21%;       /* #006d5b (pine) */
   --primary-foreground: 0 0% 100%;
-  --secondary: 210 20% 98%;
+
+  --secondary: 210 20% 98%;      /* subtle panel */
   --secondary-foreground: 0 0% 10%;
+
   --muted: 210 20% 96%;
   --muted-foreground: 0 0% 42%;
-  --accent: 18 100% 71%;       /* #ffa071 */
+
+  --accent: 18 100% 71%;         /* #ffa071 (soft orange) */
   --accent-foreground: 170 100% 21%;
+
   --border: 0 0% 86%;
   --input: 0 0% 86%;
   --ring: 0 0% 61%;
-  --radius: 0.625rem;          /* 10px */
+
+  --radius: 0.625rem;            /* 10px */
 }
 
 .dark {
   color-scheme: dark;
 
   /* DARK (HSL triplets) */
-  --background: 0 0% 12%;      /* #1e1e1e */
-  --foreground: 0 0% 93%;      /* #ededed */
-  --card: 0 0% 14%;            /* #232323 */
+  --background: 0 0% 12%;        /* #1e1e1e */
+  --foreground: 0 0% 93%;        /* #ededed */
+  --card: 0 0% 14%;              /* #232323 */
   --card-foreground: 0 0% 93%;
+
+  --primary: 170 100% 21%;       /* #006d5b */
+  --primary-foreground: 0 0% 100%;
+
   --secondary: 0 0% 16%;
   --secondary-foreground: 0 0% 93%;
+
   --muted: 0 0% 16%;
   --muted-foreground: 0 0% 63%;
-  --primary: 170 100% 21%;     /* #006d5b */
-  --primary-foreground: 0 0% 100%;
-  --accent: 18 100% 71%;       /* #ffa071 */
+
+  --accent: 18 100% 71%;         /* #ffa071 */
   --accent-foreground: 170 100% 21%;
+
   --border: 0 0% 16%;
   --input: 0 0% 16%;
   --ring: 0 0% 32%;
 }
 
-/* Keep these helpers as-is (ensure they're present) */
+/* Helpers */
 html { font-family: var(--font-body); }
 .h-heading { font-family: var(--font-heading); letter-spacing: 0.01em; }
-.cta-highlight { display:inline-block; border-radius:0.375rem; padding:0.125rem 0.375rem; background: color-mix(in oklab, oklch(from hsl(var(--accent)) l c h) 0.22, transparent); color: hsl(var(--accent-foreground)); }
+.cta-highlight { display:inline-block; border-radius:0.375rem; padding:0.125rem 0.375rem; background: hsl(var(--accent) / 0.22); color: hsl(var(--accent-foreground)); }
