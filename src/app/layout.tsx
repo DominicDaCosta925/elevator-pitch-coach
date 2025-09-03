@@ -1,21 +1,21 @@
 import type { Metadata } from "next";
-import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import { Inter, Manrope } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-// Premium font pairing: Plus Jakarta Sans for headings, Inter for body
+// Figma design tokens: Manrope for headings, Inter for body
 const inter = Inter({ 
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-body",
   weight: ["400", "500", "600", "700"],
   display: 'swap',
 });
 
-const plusJakartaSans = Plus_Jakarta_Sans({
+const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-plus-jakarta-sans", 
-  weight: ["500", "600", "700", "800"],
+  variable: "--font-heading",
+  weight: ["400", "500", "600", "700", "800"],
   display: 'swap',
 });
 
@@ -33,26 +33,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${plusJakartaSans.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${manrope.variable}`}>
       <head>
         {/* Preload critical fonts */}
         <link
           rel="preload"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
           as="style"
         />
         <link
           rel="preload" 
-          href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;500;600&display=swap"
-          as="style"
-        />
-        <link
-          rel="preload"
-          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" 
+          href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
           as="style"
         />
       </head>
-      <body className={`${inter.variable} ${plusJakartaSans.variable} antialiased font-sans`}>
+      <body className={`${inter.variable} ${manrope.variable} antialiased font-body`}>
         <ThemeProvider 
           attribute="class" 
           defaultTheme="dark" 
