@@ -24,18 +24,21 @@
 }
 
 .dark {
-  --background: #1e1e1e;
-  --foreground: #ededed;
-  --card: #232323;
-  --card-foreground: #ededed;
-  --secondary: #2a2a2a;
-  --muted: #2a2a2a;
-  --muted-foreground: #a1a1a1;
-  --accent: #ffa071;
-  --accent-foreground: #006d5b;
-  --border: #2a2a2a;
-  --input: #2a2a2a;
-  --ring: #525252;
+  --background: #1e1e1e !important;
+  --foreground: #ededed !important;
+  --card: #232323 !important;
+  --card-foreground: #ededed !important;
+  --primary: #006d5b !important;
+  --primary-foreground: #ffffff !important;
+  --secondary: #2a2a2a !important;
+  --muted: #2a2a2a !important;
+  --muted-foreground: #a1a1a1 !important;
+  --accent: #ffa071 !important;
+  --accent-foreground: #006d5b !important;
+  --border: #2a2a2a !important;
+  --input: #2a2a2a !important;
+  --ring: #525252 !important;
+  --radius: 0.625rem !important;
 }
 
 html { 

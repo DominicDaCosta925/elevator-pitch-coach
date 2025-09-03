@@ -51,6 +51,19 @@ const ThemeToggle = () => {
 
 export default function ElevatorPitchCoach() {
   console.log("LIVE: src/app/page.tsx");
+  
+  // Debug CSS variables
+  React.useEffect(() => {
+    const html = document.documentElement;
+    const computedStyle = getComputedStyle(html);
+    console.log("🎨 CSS Variables Debug:");
+    console.log("HTML classes:", html.className);
+    console.log("--background:", computedStyle.getPropertyValue('--background'));
+    console.log("--card:", computedStyle.getPropertyValue('--card'));
+    console.log("--primary:", computedStyle.getPropertyValue('--primary'));
+    console.log("--accent:", computedStyle.getPropertyValue('--accent'));
+  }, []);
+  
   // File & Generation State
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [generatedPitch, setGeneratedPitch] = useState<string>("");
@@ -289,8 +302,11 @@ export default function ElevatorPitchCoach() {
       {/* Main Content */}
       <main className="py-8">
         <div className="mx-auto max-w-screen-2xl w-full px-4 sm:px-6 lg:px-8">
-        <div className="rounded-xl p-3 mb-4" style={{ background: "var(--card)", color: "var(--card-foreground)" }}>
-          TOKEN TEST — this box should be dark gray with light text.
+        <div className="rounded-xl p-3 mb-4 bg-card text-card-foreground border border-border">
+          TOKEN TEST (Tailwind) — this box should be dark gray with light text.
+        </div>
+        <div className="rounded-xl p-3 mb-4" style={{ background: "var(--card)", color: "var(--card-foreground)", border: "1px solid var(--border)" }}>
+          TOKEN TEST (Inline) — this box should be dark gray with light text.
         </div>
         {/* Error Banner */}
         {error && (
