@@ -50,6 +50,7 @@ const ThemeToggle = () => {
 };
 
 export default function ElevatorPitchCoach() {
+  console.log("LIVE: src/app/page.tsx");
   // File & Generation State
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [generatedPitch, setGeneratedPitch] = useState<string>("");
@@ -288,6 +289,9 @@ export default function ElevatorPitchCoach() {
       {/* Main Content */}
       <main className="py-8">
         <div className="mx-auto max-w-screen-2xl w-full px-4 sm:px-6 lg:px-8">
+        <div className="rounded-xl p-3 mb-4" style={{ background: "var(--card)", color: "var(--card-foreground)" }}>
+          TOKEN TEST — this box should be dark gray with light text.
+        </div>
         {/* Error Banner */}
         {error && (
           <motion.div

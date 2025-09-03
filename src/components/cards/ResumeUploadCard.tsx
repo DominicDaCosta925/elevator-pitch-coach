@@ -74,8 +74,7 @@ export function ResumeUploadCard({ onFileSelect, selectedFile, isProcessing = fa
           </CardDescription>
         </CardHeader>
         <CardContent>
-
-      {selectedFile ? (
+          {selectedFile ? (
         <div className="border border-primary/20 rounded-lg p-4 bg-primary/5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
